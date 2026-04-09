@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piquno — Japan Ski Journal</title>
+    <meta name="description" content="Daily snow reports, resort guides, and insider tips for skiing in Japan. Niseko, Hakuba, Myoko, Nozawa and beyond.">
+    <meta name="keywords" content="Japan skiing, Japow, Niseko, Hakuba, Japan snow report, ski Japan, powder skiing Japan">
+    <link rel="canonical" href="https://piquno.com">
+    <meta property="og:title" content="Piquno — Japan Ski Journal">
+    <meta property="og:description" content="Daily snow reports, resort guides, and insider tips for skiing in Japan.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://piquno.com">
+    <link rel="alternate" type="application/rss+xml" title="Piquno RSS" href="/feed.xml">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --snow: #f7f8fa;
+            --ink: #1a1d23;
+            --slate: #4a4e57;
+            --mist: #8b919d;
+            --ice: #c5d0e0;
+            --accent: #2e6fb5;
+            --accent-light: #e8f0fb;
+            --warm: #d4541e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--snow);
+            color: var(--ink);
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        /* --- HEADER --- */
+        header {
+            background: var(--ink);
+            color: var(--snow);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(46,111,181,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(212,84,30,0.08) 0%, transparent 50%);
+        }
+
+        .header-inner {
+            position: relative;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem 3.5rem;
+        }
+
+        .site-tag {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--ice);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.4rem, 6vw, 3.6rem);
+            font-weight: 400;
+            line-height: 1.15;
+            margin-bottom: 0.75rem;
+        }
+
+        h1 .jp {
+            display: block;
+            font-size: 0.45em;
+            color: var(--ice);
+            margin-top: 0.3rem;
+            letter-spacing: 0.08em;
+        }
+
+        .header-desc {
+            color: var(--ice);
+            font-size: 1.05rem;
+            max-width: 500px;
+            font-weight: 300;
+        }
+
+        /* --- NAV --- */
+        nav {
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 0.85rem 1.5rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+        }
+
+        nav a {
+            color: var(--slate);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        nav a:hover, nav a.active { color: var(--accent); }
+
+        /* --- MAIN --- */
+        main {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 5rem;
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--mist);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        /* --- POST CARDS --- */
+        .post-list { display: flex; flex-direction: column; gap: 0; }
+
+        .post-card {
+            display: block;
+            padding: 1.8rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+        }
+
+        .post-card:first-child { padding-top: 0; }
+        .post-card:hover { background: rgba(46,111,181,0.02); }
+
+        .post-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-date {
+            font-size: 0.78rem;
+            color: var(--mist);
+            font-weight: 500;
+        }
+
+        .post-tag {
+            font-size: 0.65rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 600;
+            padding: 0.15rem 0.55rem;
+            border-radius: 2px;
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .post-tag.snow-report { background: #e6f4ea; color: #1a7c38; }
+        .post-tag.gear { background: #fef3e8; color: #b5651d; }
+
+        .post-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            line-height: 1.3;
+            margin-bottom: 0.4rem;
+            font-weight: 400;
+        }
+
+        .post-excerpt {
+            color: var(--slate);
+            font-size: 0.95rem;
+            font-weight: 300;
+            line-height: 1.65;
+        }
+
+        /* --- SIDEBAR SECTION --- */
+        .sidebar-section {
+            margin-top: 3.5rem;
+            padding: 2rem;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 6px;
+        }
+
+        .sidebar-section h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .sidebar-section p {
+            color: var(--slate);
+            font-size: 0.9rem;
+            font-weight: 300;
+            line-height: 1.7;
+        }
+
+        .resort-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .resort-links a {
+            font-size: 0.8rem;
+            padding: 0.35rem 0.75rem;
+            background: var(--accent-light);
+            color: var(--accent);
+            text-decoration: none;
+            border-radius: 3px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .resort-links a:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* --- NEWSLETTER --- */
+        .newsletter-box {
+            margin-top: 3.5rem;
+            padding: 2rem;
+            background: var(--ink);
+            color: var(--snow);
+            border-radius: 6px;
+        }
+
+        .newsletter-box h3 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .newsletter-box p {
+            font-size: 0.88rem;
+            font-weight: 300;
+            color: var(--ice);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .newsletter-form input[type="email"] {
+            flex: 1;
+            padding: 0.6rem 0.85rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            font-size: 0.88rem;
+            font-family: 'Source Sans 3', sans-serif;
+            outline: none;
+        }
+
+        .newsletter-form input[type="email"]::placeholder {
+            color: var(--mist);
+        }
+
+        .newsletter-form input[type="email"]:focus {
+            border-color: var(--accent);
+        }
+
+        .newsletter-form button {
+            padding: 0.6rem 1.2rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Source Sans 3', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .newsletter-form button:hover {
+            background: #245a96;
+        }
+
+        @media (max-width: 480px) {
+            .newsletter-form {
+                flex-direction: column;
+            }
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--mist);
+        }
+
+        footer a { color: var(--slate); }
+
+        /* --- POST PAGE STYLES --- */
+        .post-page { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+        .post-page h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .post-page .post-body { font-size: 1.05rem; font-weight: 300; }
+        .post-page .post-body p { margin-bottom: 1.2rem; }
+        .post-page .post-body h3 { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin: 2rem 0 0.75rem; }
+        .post-page .post-body a { color: var(--accent); }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 2rem;
+            font-size: 0.85rem;
+            color: var(--mist);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover { color: var(--accent); }
+
+        /* Affiliate box */
+        .affiliate-box {
+            margin: 2rem 0;
+            padding: 1.25rem 1.5rem;
+            background: var(--accent-light);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
+        }
+
+        .affiliate-box a {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .header-inner { padding: 3rem 1.25rem 2.5rem; }
+            nav ul { gap: 1.2rem; font-size: 0.78rem; padding: 0.75rem 1.25rem; }
+            main { padding: 2rem 1.25rem 4rem; }
+        }
+
+        /* --- EMPTY STATE --- */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--mist);
+        }
+
+        .empty-state .mountain {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-bg"></div>
+        <div class="header-inner">
+            <div class="site-tag">Est. 2026 · Melbourne → Japan</div>
+            <h1>Piquno<span class="jp">日本スキージャーナル</span></h1>
+            <p class="header-desc">Snow reports, resort intel, and gear picks for skiing Japan — updated daily by an Aussie who can't stay away from Japow.</p>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="/" class="active">Latest</a></li>
+            <li><a href="/tags/snow-report">Snow Reports</a></li>
+            <li><a href="/tags/resort-guide">Resorts</a></li>
+            <li><a href="/tags/gear">Gear</a></li>
+            <li><a href="/tags/travel">Travel</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="section-label">Latest Posts</div>
+        <div class="post-list" id="post-list">
+            <!-- Posts are injected here by the bot -->
+        </div>
+
+        <div class="empty-state" id="empty-state">
+            <div class="mountain">⛰️</div>
+            <p>First posts coming soon. The bot is warming up.</p>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Popular Resorts</h3>
+            <p>Quick links to the destinations we cover most.</p>
+            <div class="resort-links">
+                <a href="/tags/niseko">Niseko</a>
+                <a href="/tags/hakuba">Hakuba</a>
+                <a href="/tags/myoko">Myoko Kogen</a>
+                <a href="/tags/nozawa">Nozawa Onsen</a>
+                <a href="/tags/furano">Furano</a>
+                <a href="/tags/rusutsu">Rusutsu</a>
+                <a href="/tags/shiga-kogen">Shiga Kogen</a>
+                <a href="/tags/appi">Appi Kogen</a>
+            </div>
+        </div>
+
+        <div class="newsletter-box">
+            <h3>Weekly Japan Snow Digest</h3>
+            <p>One email a week — the best snow reports, resort guides, and gear picks. No spam, unsubscribe anytime.</p>
+            <form class="newsletter-form" action="https://buttondown.com/api/emails/embed-subscribe/piquno" method="post" target="popupwindow">
+                <input type="email" name="email" placeholder="your@email.com" required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Piquno. Built with snow and caffeine in Melbourne.<br>
+        <a href="/feed.xml">RSS</a></p>
+    </footer>
+
+    <script>
+        // Load posts from posts/index.json
+        async function loadPosts() {
+            try {
+                const res = await fetch('/posts/index.json');
+                if (!res.ok) return;
+                const posts = await res.json();
+                if (!posts.length) return;
+
+                document.getElementById('empty-state').style.display = 'none';
+                const list = document.getElementById('post-list');
+                list.innerHTML = posts.slice(0, 20).map(p => `
+                    <a class="post-card" href="/posts/${p.slug}.html">
+                        <div class="post-meta">
+                            <span class="post-date">${new Date(p.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <span class="post-tag ${p.tag === 'Snow Report' ? 'snow-report' : p.tag === 'Gear' ? 'gear' : ''}">${p.tag}</span>
+                        </div>
+                        <div class="post-title">${p.title}</div>
+                        <div class="post-excerpt">${p.excerpt}</div>
+                    </a>
+                `).join('');
+            } catch (e) {
+                // No posts yet, show empty state
+            }
+        }
+        loadPosts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Piquno — Japan Ski Journal</title>
+    <link>https://piquno.com</link>
+    <description>Snow reports, resort intel, and gear picks for skiing Japan.</description>
+    <language>en-au</language>
+    <atom:link href="https://piquno.com/feed.xml" rel="self" type="application/rss+xml"/>
+</channel>
+</rss>
