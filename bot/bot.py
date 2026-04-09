@@ -685,10 +685,13 @@ def post_to_bluesky(title: str, excerpt: str, url: str):
         session.raise_for_status()
         auth = session.json()
 
-        # Build post text
-        text = f"{title}\n\n{excerpt}\n\n{url}"
+        # Build post text with hashtags
+        hashtags = "\n\n#SkiJapan #Japow #JapanTravel #PowderSkiing #JapanSki"
+        text = f"{title}\n\n{excerpt}\n\n{url}{hashtags}"
         if len(text) > 300:
-            text = f"{title}\n\n{url}"
+            text = f"{title}\n\n{url}{hashtags}"
+        if len(text) > 300:
+            text = f"{title}\n\n{url}\n\n#SkiJapan #Japow"
 
         # Create post
         r = requests.post(
@@ -726,11 +729,12 @@ def post_to_twitter(title: str, excerpt: str, url: str):
         import urllib.parse
 
         # OAuth 1.0a signature
-        tweet_text = f"{title}\n\n{url}"
+        hashtags = "\n\n#SkiJapan #Japow #JapanTravel #PowderSkiing"
+        tweet_text = f"{title}\n\n{url}{hashtags}"
         if len(tweet_text) > 280:
-            # Truncate title to fit
-            max_title = 280 - len(url) - 3  # 3 for newlines
-            tweet_text = f"{title[:max_title]}…\n\n{url}"
+            tweet_text = f"{title}\n\n{url}\n\n#SkiJapan #Japow"
+        if len(tweet_text) > 280:
+            tweet_text = f"{title}\n\n{url}"
 
         oauth_nonce = hashlib.md5(str(time.time()).encode()).hexdigest()
         oauth_timestamp = str(int(time.time()))
@@ -777,21 +781,13 @@ def post_to_twitter(title: str, excerpt: str, url: str):
         log.warning(f"Twitter post failed: {e}")
 
 
-def share_to_socials(posts_data: list[dict]):
-    """Share the latest feature article (not daily roundup) to social platforms."""
-    # Find the most recent feature article (non-Snow Report)
-    feature = None
-    for p in posts_data:
-        if p["tag"] != "Snow Report":
-            feature = p
-            break
-
-    if not feature:
-        return
-
-    url = f"https://piquno.com/posts/{feature['slug']}.html"
-    post_to_bluesky(feature["title"], feature.get("excerpt", ""), url)
-    post_to_twitter(feature["title"], feature.get("excerpt", ""), url)
+def share_to_socials(posts_data: list[dict], new_post_count: int = 2):
+    """Share the latest new posts to social platforms."""
+    for p in posts_data[:new_post_count]:
+        url = f"https://piquno.com/posts/{p['slug']}.html"
+        post_to_bluesky(p["title"], p.get("excerpt", ""), url)
+        post_to_twitter(p["title"], p.get("excerpt", ""), url)
+        time.sleep(5)  # Small delay between posts
 
 
 # ---------------------------------------------------------------------------
@@ -873,7 +869,7 @@ def main():
         generate_rss_feed(existing_posts)
         deploy_to_netlify()
         ping_google()
-        share_to_socials(existing_posts)
+        share_to_socials(existing_posts, posts_created)
         log.info(f"Done — {posts_created} posts published")
     else:
         log.info("No posts generated")
