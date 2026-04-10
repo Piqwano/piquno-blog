@@ -1,5 +1,5 @@
 # “””
-Piquno Japan Ski Blog — Auto-posting Bot v2
+Piquno Japan Ski Blog - Auto-posting Bot v2
 
 Runs daily on Railway. Generates:
 
