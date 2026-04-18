@@ -1,13 +1,83 @@
+# Piquno — Netlify configuration
+#
+# Note: this file is only honored when Netlify builds from GitHub.
+# The bot deploys a zip of site/ via the API, which uses site/_headers and
+# site/_redirects instead. These settings must mirror those files.
+
 [build]
   publish = "site"
 
+# --- Redirects ---
+# Any /tags/* URL that doesn't match a generated static page falls through to
+# the branded 404 with proper HTTP status.
 [[redirects]]
   from = "/tags/*"
-  to = "/tags.html"
-  status = 200
+  to = "/404.html"
+  status = 404
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
+# --- Security headers (global) ---
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+# --- Cache headers: HTML ---
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/about"
+  [headers.values]
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/tags/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/posts/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=600, must-revalidate"
+
+# --- Cache headers: feeds & assets ---
+[[headers]]
+  for = "/feed.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=1800"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=1800"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/posts/index.json"
+  [headers.values]
+    Cache-Control = "public, max-age=120, must-revalidate"
+
+[[headers]]
+  for = "/styles.css"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/favicon.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
