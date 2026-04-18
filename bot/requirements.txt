@@ -1,2 +1,5 @@
-feedparser==6.0.11
-requests==2.31.0
+# Piquno bot dependencies
+# Minimum versions pinned to address known CVEs; use `>=` to allow security patches.
+feedparser>=6.0.11,<7
+requests>=2.32.4,<3
+urllib3>=2.2.2,<3
