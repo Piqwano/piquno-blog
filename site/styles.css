@@ -1,0 +1,664 @@
+/* ==========================================================================
+   Piquno — shared stylesheet
+   Cached 24h at the edge (see /site/_headers). Because the filename isn't
+   content-hashed, a returning visitor may see the old CSS for up to a day
+   after you ship changes. If you need an instant visual update, rename the
+   file (styles.v2.css, etc.) and update the <link rel="stylesheet"> hrefs.
+   ========================================================================== */
+
+:root {
+    --snow: #f7f8fa;
+    --ink: #1a1d23;
+    --slate: #4a4e57;
+    --mist: #8b919d;
+    --ice: #c5d0e0;
+    --accent: #2e6fb5;
+    --accent-light: #e8f0fb;
+    --warm: #d4541e;
+    --surface: #ffffff;
+    --border: rgba(0, 0, 0, 0.06);
+    /* "Brand" tokens that DON'T flip between light and dark mode. Used by
+       hero-dark elements (header, newsletter CTA, skip-link) that should stay
+       dark even in a dark-mode viewport so the page still has clear visual
+       hierarchy. */
+    --brand-dark: #1a1d23;
+    --brand-light: #f7f8fa;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --snow: #0f1216;
+        --ink: #e9edf3;
+        --slate: #b6bdc8;
+        --mist: #7a8290;
+        --ice: #c5d0e0;
+        --accent: #6aa2db;
+        --accent-light: #182637;
+        --warm: #e27446;
+        --surface: #181c22;
+        --border: rgba(255, 255, 255, 0.08);
+        /* Brand tokens intentionally NOT overridden here. */
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+    background: var(--snow);
+    color: var(--ink);
+    line-height: 1.7;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Skip link for keyboard/AT users */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--brand-dark);
+    color: var(--brand-light);
+    padding: 0.5rem 1rem;
+    z-index: 1000;
+    text-decoration: none;
+}
+.skip-link:focus { top: 0; }
+
+/* --- HEADER --- */
+header {
+    background: var(--brand-dark);
+    color: var(--brand-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.header-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 80%, rgba(46, 111, 181, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(212, 84, 30, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.header-inner {
+    position: relative;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 3.5rem;
+}
+
+.site-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ice);
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-weight: 400;
+    line-height: 1.15;
+}
+
+header h1 {
+    font-size: clamp(2.4rem, 6vw, 3.6rem);
+    margin-bottom: 0.75rem;
+}
+
+h1 .jp {
+    display: block;
+    font-size: 0.45em;
+    color: var(--ice);
+    margin-top: 0.3rem;
+    letter-spacing: 0.08em;
+}
+
+.header-desc {
+    color: var(--ice);
+    font-size: 1.05rem;
+    max-width: 500px;
+    font-weight: 300;
+}
+
+/* --- NAV --- */
+nav {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.75rem;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+nav a {
+    color: var(--slate);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+nav a:hover,
+nav a:focus-visible,
+nav a.active { color: var(--accent); }
+
+/* --- MAIN --- */
+main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+}
+
+.section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mist);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* --- POST CARDS --- */
+.post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.post-card {
+    display: block;
+    padding: 1.8rem 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+
+.post-card:first-child { padding-top: 0; }
+.post-card:hover,
+.post-card:focus-visible {
+    background: rgba(46, 111, 181, 0.04);
+    outline: none;
+}
+
+.post-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.post-date {
+    font-size: 0.78rem;
+    color: var(--mist);
+    font-weight: 500;
+}
+
+.post-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 2px;
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+.post-tag.snow-report { background: #e6f4ea; color: #1a7c38; }
+.post-tag.gear        { background: #fef3e8; color: #b5651d; }
+.post-tag.travel      { background: #f0e8fb; color: #5b3a8f; }
+.post-tag.culture     { background: #fce8ee; color: #a52853; }
+.post-tag.planning    { background: #e8f5fb; color: #1c6b8c; }
+.post-tag.resort-guide { background: #fff4e0; color: #8a6412; }
+
+@media (prefers-color-scheme: dark) {
+    .post-tag.snow-report { background: #14291a; color: #6cc289; }
+    .post-tag.gear        { background: #2e200f; color: #e0a670; }
+    .post-tag.travel      { background: #201732; color: #b694e4; }
+    .post-tag.culture     { background: #2e1620; color: #e48aa9; }
+    .post-tag.planning    { background: #132430; color: #74bfe0; }
+    .post-tag.resort-guide { background: #2e2410; color: #e3c276; }
+}
+
+.post-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.4rem;
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+    font-weight: 400;
+    color: var(--ink);
+}
+
+.post-excerpt {
+    color: var(--slate);
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1.65;
+}
+
+/* --- SIDEBAR / CALLOUT SECTION --- */
+.sidebar-section {
+    margin-top: 3.5rem;
+    padding: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.sidebar-section h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: var(--ink);
+}
+
+.sidebar-section p {
+    color: var(--slate);
+    font-size: 0.9rem;
+    font-weight: 300;
+    line-height: 1.7;
+}
+
+.resort-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.resort-links a {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--accent-light);
+    color: var(--accent);
+    text-decoration: none;
+    border-radius: 3px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.resort-links a:hover,
+.resort-links a:focus-visible {
+    background: var(--accent);
+    color: white;
+    outline: none;
+}
+
+/* --- NEWSLETTER --- */
+.newsletter-box {
+    margin-top: 3.5rem;
+    padding: 2rem;
+    background: var(--brand-dark);
+    color: var(--brand-light);
+    border-radius: 6px;
+}
+
+.newsletter-box h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+}
+
+.newsletter-box p {
+    font-size: 0.88rem;
+    font-weight: 300;
+    color: var(--ice);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.newsletter-box .nl-status {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--ice);
+    min-height: 1.2em;
+}
+
+.newsletter-form {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.newsletter-form input[type="email"] {
+    flex: 1;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font-size: 0.88rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.newsletter-form input[type="email"]::placeholder { color: rgba(255, 255, 255, 0.55); }
+
+.newsletter-form input[type="email"]:focus { border-color: var(--accent); }
+
+.newsletter-form button {
+    padding: 0.6rem 1.2rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.newsletter-form button:hover,
+.newsletter-form button:focus-visible {
+    background: #245a96;
+    outline: none;
+}
+
+@media (max-width: 480px) {
+    .newsletter-form { flex-direction: column; }
+}
+
+/* --- POST PAGE --- */
+.post-page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+}
+
+.post-page h1 {
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+}
+
+.breadcrumb {
+    font-size: 0.8rem;
+    color: var(--mist);
+    margin-bottom: 1.25rem;
+    /* Let long items wrap rather than overflow horizontally */
+    word-break: break-word;
+}
+
+.breadcrumb a {
+    color: var(--mist);
+    text-decoration: none;
+}
+
+.breadcrumb a:hover,
+.breadcrumb a:focus-visible { color: var(--accent); outline: none; }
+
+.breadcrumb .sep { margin: 0 0.4rem; opacity: 0.6; }
+
+/* On narrow screens, truncate the current-page label so the breadcrumb doesn't
+   consume multiple lines when titles are long. */
+.breadcrumb .current {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+@media (max-width: 520px) {
+    .breadcrumb .current { max-width: 180px; }
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 2rem;
+    font-size: 0.85rem;
+    color: var(--mist);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-link:hover,
+.back-link:focus-visible { color: var(--accent); outline: none; }
+
+.post-page .post-meta { margin-bottom: 1rem; }
+
+.post-body {
+    font-size: 1.05rem;
+    font-weight: 300;
+}
+
+.post-body p { margin-bottom: 1.2rem; }
+
+.post-body h2,
+.post-body h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-weight: 400;
+    color: var(--ink);
+}
+
+.post-body h2 { font-size: 1.3rem; margin: 2rem 0 0.75rem; }
+.post-body h3 { font-size: 1.1rem; margin: 1.5rem 0 0.6rem; }
+
+.post-body a { color: var(--accent); }
+
+.post-body ul,
+.post-body ol { margin: 0 0 1.2rem 1.5rem; }
+
+.post-body li { margin-bottom: 0.4rem; }
+
+.hero-img {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin: 1.5rem 0;
+    background: var(--border);  /* placeholder color while loading */
+}
+
+.hero-credit {
+    font-size: 0.72rem;
+    color: var(--mist);
+    margin: -1rem 0 1.5rem;
+}
+
+.hero-credit a {
+    color: var(--mist);
+    text-decoration: underline;
+}
+
+/* --- Read next --- */
+.read-next {
+    margin-top: 3.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.read-next h2 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-weight: 400;
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+    color: var(--ink);
+}
+
+.read-next .post-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+.read-next .post-card {
+    padding: 1.2rem 0;
+}
+
+.read-next .post-card h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.1rem;
+    line-height: 1.3;
+    margin-bottom: 0.35rem;
+    font-weight: 400;
+    color: var(--ink);
+}
+
+/* --- TAG PAGE --- */
+.tag-page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+}
+
+.page-title {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+}
+
+.page-desc {
+    color: var(--slate);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: 2rem;
+}
+
+/* --- ABOUT PAGE --- */
+.about-page {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 5rem;
+}
+
+.about-page h1 {
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    margin-bottom: 0.5rem;
+}
+
+.about-page .subtitle {
+    color: var(--mist);
+    font-size: 1rem;
+    font-weight: 300;
+    margin-bottom: 2.5rem;
+}
+
+.about-page h2 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+    margin: 2.5rem 0 0.75rem;
+    color: var(--ink);
+}
+
+.about-page p {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: var(--slate);
+    margin-bottom: 1.2rem;
+    line-height: 1.75;
+}
+
+.about-page a { color: var(--accent); }
+
+/* --- EMPTY STATE --- */
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--mist);
+}
+
+.empty-state .mountain {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    font-weight: 300;
+}
+
+/* --- 404 --- */
+.error-page {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+    text-align: center;
+}
+
+.error-page .code {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(4rem, 15vw, 7rem);
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.error-page h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.error-page p {
+    color: var(--slate);
+    font-weight: 300;
+    margin-bottom: 2rem;
+}
+
+.error-page .btn {
+    display: inline-block;
+    padding: 0.7rem 1.4rem;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.error-page .btn:hover,
+.error-page .btn:focus-visible {
+    background: #245a96;
+    outline: none;
+}
+
+/* --- FOOTER --- */
+footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--mist);
+}
+
+footer a { color: var(--slate); }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 600px) {
+    .header-inner { padding: 3rem 1.25rem 2.5rem; }
+    nav ul { gap: 1.2rem; font-size: 0.78rem; padding: 0.75rem 1.25rem; }
+    main,
+    .tag-page { padding: 2rem 1.25rem 4rem; }
+    .post-page { padding: 2rem 1.25rem 4rem; }
+}
+
+/* --- REDUCED MOTION --- */
+@media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    html { scroll-behavior: auto; }
+}

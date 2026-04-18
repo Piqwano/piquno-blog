@@ -1,0 +1,5 @@
+# Safety net: any /tags/* URL that doesn't match a real generated tag page
+# returns our branded 404 with proper HTTP status. Generated tag pages match
+# before this rule because static files are evaluated first by Netlify.
+# (Netlify also auto-uses /404.html for any other unmatched path.)
+/tags/*  /404.html  404

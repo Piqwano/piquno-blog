@@ -1,54 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About — Piquno</title>
     <meta name="description" content="Piquno is a Japan skiing journal by an Australian skier chasing Japow every winter.">
     <link rel="canonical" href="https://piquno.com/about">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="About — Piquno">
+    <meta property="og:description" content="Piquno is a Japan skiing journal by an Australian skier chasing Japow every winter.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://piquno.com/about">
+    <meta property="og:site_name" content="Piquno">
+    <meta property="og:locale" content="en_AU">
+    <meta property="og:image" content="https://piquno.com/og-default.jpg">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@piqunoski">
+    <meta name="twitter:creator" content="@piqunoski">
+    <meta name="twitter:title" content="About — Piquno">
+    <meta name="twitter:description" content="Piquno is a Japan skiing journal by an Australian skier chasing Japow every winter.">
+    <meta name="twitter:image" content="https://piquno.com/og-default.jpg">
+
+    <meta name="theme-color" content="#1a1d23" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="alternate" type="application/rss+xml" title="Piquno RSS" href="/feed.xml">
+
+    <link rel="me" href="https://bsky.app/profile/piqunoski.bsky.social">
+    <link rel="me" href="https://x.com/piqunoski">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": "About Piquno",
+      "url": "https://piquno.com/about",
+      "inLanguage": "en-AU",
+      "mainEntity": {
+        "@type": "Person",
+        "name": "Rob",
+        "description": "Melbourne-based skier writing about Japan skiing.",
+        "url": "https://piquno.com/about",
+        "sameAs": [
+          "https://bsky.app/profile/piqunoski.bsky.social",
+          "https://x.com/piqunoski"
+        ]
+      }
+    }
+    </script>
     <style>
-        :root{--snow:#f7f8fa;--ink:#1a1d23;--slate:#4a4e57;--mist:#8b919d;--ice:#c5d0e0;--accent:#2e6fb5;--accent-light:#e8f0fb}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Source Sans 3',sans-serif;background:var(--snow);color:var(--ink);line-height:1.7;font-weight:400}
-
-        nav{border-bottom:1px solid rgba(0,0,0,.06);background:#fff;position:sticky;top:0;z-index:100}nav ul{list-style:none;display:flex;gap:2rem;max-width:780px;margin:0 auto;padding:.85rem 1.5rem;font-size:.82rem;font-weight:500;letter-spacing:.03em}nav a{color:var(--slate);text-decoration:none;transition:color .2s}nav a:hover,nav a.active{color:var(--accent)}
-
-        .about-page{max-width:620px;margin:0 auto;padding:3.5rem 1.5rem 5rem}
-
-        .about-page h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,2.8rem);font-weight:400;line-height:1.2;margin-bottom:0.5rem}
-        .about-page .subtitle{color:var(--mist);font-size:1rem;font-weight:300;margin-bottom:2.5rem}
-
-        .about-page h2{font-family:'DM Serif Display',serif;font-size:1.25rem;font-weight:400;margin:2.5rem 0 0.75rem;color:var(--ink)}
-
-        .about-page p{font-size:1.05rem;font-weight:300;color:var(--slate);margin-bottom:1.2rem;line-height:1.75}
-
-        .about-page a{color:var(--accent)}
-
-        .gear-list{margin:0.5rem 0 1.5rem 0;padding:0;list-style:none}
-        .gear-list li{padding:0.4rem 0;font-size:0.95rem;font-weight:300;color:var(--slate);border-bottom:1px solid rgba(0,0,0,0.04)}
-        .gear-list li:last-child{border:none}
-        .gear-list .label{font-weight:500;color:var(--ink)}
-
-        .cta-box{margin:2.5rem 0;padding:1.5rem;background:white;border:1px solid rgba(0,0,0,0.06);border-radius:6px}
-        .cta-box p{margin-bottom:0.5rem;font-size:0.95rem}
-
-        footer{border-top:1px solid rgba(0,0,0,.06);padding:2.5rem 1.5rem;text-align:center;font-size:.8rem;color:var(--mist)}footer a{color:var(--slate)}
-
-        @media(max-width:600px){.about-page{padding:2.5rem 1.25rem 4rem}nav ul{gap:1.2rem;font-size:.78rem;padding:.75rem 1.25rem}}
+        /* Page-specific tweaks beyond the shared stylesheet */
+        .gear-list { margin: 0.5rem 0 1.5rem 0; padding: 0; list-style: none; }
+        .gear-list li {
+            padding: 0.4rem 0;
+            font-size: 0.95rem;
+            font-weight: 300;
+            color: var(--slate);
+            border-bottom: 1px solid var(--border);
+        }
+        .gear-list li:last-child { border: none; }
+        .gear-list .label { font-weight: 500; color: var(--ink); }
     </style>
 </head>
 <body>
-    <nav>
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    <nav aria-label="Primary">
         <ul>
             <li><a href="/">Latest</a></li>
-            <li><a href="/tags/snow-report">Snow Reports</a></li>
-            <li><a href="/tags/resort-guide">Resorts</a></li>
-            <li><a href="/tags/gear">Gear</a></li>
-            <li><a href="/tags/travel">Travel</a></li>
+            <li><a href="/tags/snow-report/">Snow Reports</a></li>
+            <li><a href="/tags/resort-guide/">Resorts</a></li>
+            <li><a href="/tags/gear/">Gear</a></li>
+            <li><a href="/tags/travel/">Travel</a></li>
+            <li><a href="/tags/planning/">Planning</a></li>
             <li><a href="/about" class="active">About</a></li>
         </ul>
     </nav>
 
-    <div class="about-page">
+    <main id="main" class="about-page">
         <h1>G'day, I'm Rob</h1>
         <p class="subtitle">Melbourne-based skier with a Japan problem.</p>
 
@@ -72,19 +111,54 @@
 
         <p>No fluff. No listicles recycled from other blogs. Just straight-up intel from someone who actually skis these mountains.</p>
 
-        <div style="margin:2.5rem 0;padding:2rem;background:var(--ink);color:var(--snow);border-radius:6px;">
-            <h2 style="font-family:'DM Serif Display',serif;font-size:1.2rem;margin:0 0 0.4rem;color:var(--snow);">Weekly Japan Snow Digest</h2>
-            <p style="font-size:0.88rem;font-weight:300;color:var(--ice);margin-bottom:1rem;">One email a week — snow reports, resort guides, and gear picks. No spam.</p>
-            <form action="https://buttondown.com/api/emails/embed-subscribe/piquno" method="post" target="popupwindow" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                <input type="email" name="email" placeholder="your@email.com" required style="flex:1;min-width:180px;padding:0.6rem 0.85rem;border:1px solid rgba(255,255,255,0.15);border-radius:4px;background:rgba(255,255,255,0.08);color:white;font-size:0.88rem;font-family:'Source Sans 3',sans-serif;">
-                <button type="submit" style="padding:0.6rem 1.2rem;background:var(--accent);color:white;border:none;border-radius:4px;font-size:0.85rem;font-weight:600;cursor:pointer;">Subscribe</button>
+        <div class="newsletter-box" style="margin-top:2.5rem">
+            <h3>Weekly Japan Snow Digest</h3>
+            <p>One email a week — snow reports, resort guides, and gear picks. No spam.</p>
+            <form class="newsletter-form"
+                  id="newsletter-form-about"
+                  action="https://buttondown.com/api/emails/embed-subscribe/piquno"
+                  method="post"
+                  target="popupwindow">
+                <label for="nl-email-about" style="position:absolute;left:-9999px">Your email address</label>
+                <input type="email" id="nl-email-about" name="email" placeholder="your@email.com" required autocomplete="email">
+                <button type="submit">Subscribe</button>
             </form>
+            <p class="nl-status" id="nl-status-about" role="status" aria-live="polite"></p>
         </div>
-    </div>
+
+        <h2>Follow Along</h2>
+        <p>
+          <a href="https://bsky.app/profile/piqunoski.bsky.social" rel="me">Bluesky</a> ·
+          <a href="https://x.com/piqunoski" rel="me">X/Twitter</a> ·
+          <a href="/feed.xml">RSS</a>
+        </p>
+    </main>
 
     <footer>
         <p>&copy; 2026 Piquno. Built with snow and caffeine in Melbourne.<br>
         <a href="/">Home</a> · <a href="/feed.xml">RSS</a></p>
     </footer>
+
+    <script>
+        // Submit newsletter via fetch so popup blockers don't silently swallow the request.
+        (function () {
+            var form = document.getElementById('newsletter-form-about');
+            var status = document.getElementById('nl-status-about');
+            if (!form || !status) return;
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var data = new FormData(form);
+                status.textContent = 'Subscribing…';
+                fetch(form.action, { method: 'POST', body: data, mode: 'no-cors' })
+                    .then(function () {
+                        status.textContent = 'Thanks! Check your inbox to confirm.';
+                        form.reset();
+                    })
+                    .catch(function () {
+                        status.textContent = 'Something went wrong. Try again in a moment.';
+                    });
+            });
+        })();
+    </script>
 </body>
 </html>

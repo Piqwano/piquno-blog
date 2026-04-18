@@ -1,0 +1,59 @@
+# Security headers — applied to everything
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+# HTML pages — short edge cache, quick invalidation after each bot deploy
+/
+  Cache-Control: public, max-age=300, must-revalidate
+/about
+  Cache-Control: public, max-age=300, must-revalidate
+/tags/*
+  Cache-Control: public, max-age=300, must-revalidate
+/posts/*.html
+  Cache-Control: public, max-age=600, must-revalidate
+/404.html
+  Cache-Control: public, max-age=300
+
+# Feed & sitemap — short cache; crawlers respect these
+/feed.xml
+  Cache-Control: public, max-age=1800
+  Content-Type: application/rss+xml; charset=utf-8
+/sitemap.xml
+  Cache-Control: public, max-age=1800
+  Content-Type: application/xml; charset=utf-8
+/robots.txt
+  Cache-Control: public, max-age=3600
+  Content-Type: text/plain; charset=utf-8
+
+# Posts index feeds the homepage JS fallback; keep it fresh
+/posts/index.json
+  Cache-Control: public, max-age=120, must-revalidate
+  Content-Type: application/json; charset=utf-8
+
+# Styles & static assets — filename-versioned content; cache hard
+/styles.css
+  Cache-Control: public, max-age=86400
+
+# Icons & images — long cache
+/favicon.svg
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/svg+xml; charset=utf-8
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+/icon-192.png
+  Cache-Control: public, max-age=31536000, immutable
+/icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
+/og-default.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+# Manifest
+/site.webmanifest
+  Cache-Control: public, max-age=86400
+  Content-Type: application/manifest+json; charset=utf-8

@@ -1,48 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{LANG}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{TITLE}} — Piquno</title>
     <meta name="description" content="{{EXCERPT}}">
+    <meta name="author" content="Piquno">
+    <link rel="canonical" href="https://piquno.com/posts/{{SLUG}}.html">
+
+    <!-- Open Graph basics (article meta is injected by the bot below) -->
     <meta property="og:title" content="{{TITLE}} — Piquno">
     <meta property="og:description" content="{{EXCERPT}}">
     <meta property="og:type" content="article">
     <meta property="og:url" content="https://piquno.com/posts/{{SLUG}}.html">
-    <link rel="canonical" href="https://piquno.com/posts/{{SLUG}}.html">
+
+    <!-- Social meta (Twitter Card + article:published_time + og:image etc.) -->
+    {{SOCIAL_META}}
+
+    <!-- Theme & icons -->
+    <meta name="theme-color" content="#1a1d23" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <!-- Feed -->
+    <link rel="alternate" type="application/rss+xml" title="Piquno RSS" href="/feed.xml">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root{--snow:#f7f8fa;--ink:#1a1d23;--slate:#4a4e57;--mist:#8b919d;--ice:#c5d0e0;--accent:#2e6fb5;--accent-light:#e8f0fb;--warm:#d4541e}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Source Sans 3',sans-serif;background:var(--snow);color:var(--ink);line-height:1.7;font-weight:400}nav{border-bottom:1px solid rgba(0,0,0,.06);background:#fff;position:sticky;top:0;z-index:100}nav ul{list-style:none;display:flex;gap:2rem;max-width:780px;margin:0 auto;padding:.85rem 1.5rem;font-size:.82rem;font-weight:500;letter-spacing:.03em}nav a{color:var(--slate);text-decoration:none;transition:color .2s}nav a:hover{color:var(--accent)}.post-page{max-width:680px;margin:0 auto;padding:3rem 1.5rem 5rem}.back-link{display:inline-block;margin-bottom:2rem;font-size:.85rem;color:var(--mist);text-decoration:none;font-weight:500}.back-link:hover{color:var(--accent)}.post-meta{display:flex;gap:1rem;align-items:center;margin-bottom:1rem}.post-date{font-size:.8rem;color:var(--mist);font-weight:500}.post-tag{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:.15rem .55rem;border-radius:2px;background:var(--accent-light);color:var(--accent)}.post-tag.snow-report{background:#e6f4ea;color:#1a7c38}.post-tag.gear{background:#fef3e8;color:#b5651d}h1{font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,4vw,2.4rem);line-height:1.2;margin-bottom:1.5rem;font-weight:400}.post-body{font-size:1.05rem;font-weight:300}.post-body p{margin-bottom:1.2rem}.post-body h2{font-family:'DM Serif Display',serif;font-size:1.3rem;margin:2rem 0 .75rem;font-weight:400}.post-body a{color:var(--accent)}.post-body ul,.post-body ol{margin:0 0 1.2rem 1.5rem}.post-body li{margin-bottom:.4rem}.affiliate-box{margin:2rem 0;padding:1.25rem 1.5rem;background:var(--accent-light);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:.9rem}.affiliate-box a{color:var(--accent);font-weight:600}.hero-img{width:100%;max-height:400px;object-fit:cover;border-radius:6px;margin:1.5rem 0}.hero-credit{font-size:.72rem;color:var(--mist);margin:-1rem 0 1.5rem}.hero-credit a{color:var(--mist);text-decoration:underline}footer{border-top:1px solid rgba(0,0,0,.06);padding:2.5rem 1.5rem;text-align:center;font-size:.8rem;color:var(--mist)}footer a{color:var(--slate)}@media(max-width:600px){.post-page{padding:2rem 1.25rem 4rem}nav ul{gap:1.2rem;font-size:.78rem;padding:.75rem 1.25rem}}
-    </style>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/styles.css">
+
+    <!-- Structured data -->
+    {{JSON_LD}}
 </head>
 <body>
-    <nav>
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    <nav aria-label="Primary">
         <ul>
             <li><a href="/">Latest</a></li>
-            <li><a href="/tags/snow-report">Snow Reports</a></li>
-            <li><a href="/tags/resort-guide">Resorts</a></li>
-            <li><a href="/tags/gear">Gear</a></li>
-            <li><a href="/tags/travel">Travel</a></li>
+            <li><a href="/tags/snow-report/">Snow Reports</a></li>
+            <li><a href="/tags/resort-guide/">Resorts</a></li>
+            <li><a href="/tags/gear/">Gear</a></li>
+            <li><a href="/tags/travel/">Travel</a></li>
+            <li><a href="/tags/planning/">Planning</a></li>
             <li><a href="/about">About</a></li>
         </ul>
     </nav>
 
-    <div class="post-page">
-        <a class="back-link" href="/">← Back to all posts</a>
+    <article id="main" class="post-page">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span class="sep" aria-hidden="true">›</span>
+            <a href="/tags/{{TAG_SLUG}}/">{{TAG}}</a>
+            <span class="sep" aria-hidden="true">›</span>
+            <span class="current" aria-current="page">{{TITLE}}</span>
+        </nav>
+
         <div class="post-meta">
-            <span class="post-date">{{DATE_FORMATTED}}</span>
+            <time class="post-date" datetime="{{DATE_ISO}}">{{DATE_FORMATTED}}</time>
             <span class="post-tag {{TAG_CLASS}}">{{TAG}}</span>
         </div>
-        <h1>{{TITLE}}</h1>
+        <h1>{{TITLE_TEXT}}</h1>
         {{HERO_IMAGE}}
         <div class="post-body">
             {{BODY}}
         </div>
-    </div>
+
+        {{READ_NEXT}}
+
+        <a class="back-link" href="/">← Back to all posts</a>
+    </article>
 
     <footer>
         <p>&copy; 2026 Piquno. Built with snow and caffeine in Melbourne.<br>
-        <a href="/">Home</a> · <a href="/feed.xml">RSS</a></p>
+        <a href="/">Home</a> · <a href="/feed.xml">RSS</a> · <a href="/about">About</a></p>
     </footer>
 </body>
 </html>

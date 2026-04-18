@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="12" fill="#1a1d23"/>
+  <!-- Back mountain -->
+  <path d="M8 50 L24 22 L40 50 Z" fill="#4a4e57"/>
+  <!-- Snow cap on back mountain -->
+  <path d="M20 28 L24 22 L28 28 L26 30 L24 28 L22 30 Z" fill="#f7f8fa"/>
+  <!-- Front mountain -->
+  <path d="M20 50 L36 18 L56 50 Z" fill="#2e6fb5"/>
+  <!-- Snow cap on front mountain -->
+  <path d="M31 26 L36 18 L41 26 L39 28 L36 25 L33 28 Z" fill="#f7f8fa"/>
+  <!-- Ground line -->
+  <rect x="6" y="50" width="52" height="2" fill="#c5d0e0"/>
+</svg>
