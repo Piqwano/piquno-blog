@@ -988,11 +988,19 @@ def _render_post_cards_html(posts: list[dict], limit: int = 20) -> str:
     return "\n".join(lines)
 
 
-# Matches the <div class="post-list" id="post-list"> ... </div>
-# (across newlines, non-greedy) and the following empty-state block.
+# Matches the actual <div class="post-list" id="post-list"> block AND the
+# empty-state block that follows. The regex:
+#   - Requires a newline+whitespace before the opening <div, so it doesn't
+#     match the same string when it appears inside an HTML comment above.
+#   - Uses two non-greedy .*? segments, one for the post-list inner content
+#     (stops at its </div>) and one for the empty-state's mountain div.
+#   - Then requires the empty-state's closing </div> after the <p>…</p>.
 _POST_LIST_RE = re.compile(
-    r'<div class="post-list" id="post-list">.*?</div>\s*'
-    r'<div class="empty-state" id="empty-state">.*?</div>',
+    r'\n\s+<div class="post-list" id="post-list">.*?</div>\s*'
+    r'<div class="empty-state" id="empty-state"[^>]*>'
+    r'\s*<div class="mountain">[^<]*</div>'
+    r'\s*<p>[^<]*</p>'
+    r'\s*</div>',
     re.DOTALL,
 )
 
@@ -1008,7 +1016,7 @@ def render_homepage(posts: list[dict]):
     if posts:
         cards = _render_post_cards_html(posts, limit=20)
         replacement = (
-            f'<div class="post-list" id="post-list">\n{cards}\n        </div>\n\n'
+            f'\n        <div class="post-list" id="post-list">\n{cards}\n        </div>\n\n'
             f'        <div class="empty-state" id="empty-state" style="display:none">\n'
             f'            <div class="mountain">⛰️</div>\n'
             f'            <p>First posts coming soon. The bot is warming up.</p>\n'
@@ -1017,7 +1025,7 @@ def render_homepage(posts: list[dict]):
     else:
         # No posts yet: leave the empty state visible
         replacement = (
-            f'<div class="post-list" id="post-list"></div>\n\n'
+            f'\n        <div class="post-list" id="post-list"></div>\n\n'
             f'        <div class="empty-state" id="empty-state">\n'
             f'            <div class="mountain">⛰️</div>\n'
             f'            <p>First posts coming soon. The bot is warming up.</p>\n'
