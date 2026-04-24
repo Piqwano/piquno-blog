@@ -477,9 +477,8 @@ def call_claude(prompt: str, system: str = "", max_tokens: int = 3500) -> str | 
         return None
 
 
-def call_claude_json(prompt: str, max_tokens: int = 3500, required_keys: tuple = ()) -> dict | None:
-    """Call Claude and parse the response as JSON. Returns None on failure."""
-    text = call_claude(prompt, max_tokens)
+def call_claude_json(prompt: str, system: str = "", max_tokens: int = 3500, required_keys: tuple = ()) -> dict | None:
+    text = call_claude(prompt, system=system, max_tokens=max_tokens)
     if not text:
         return None
     try:
