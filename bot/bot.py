@@ -318,71 +318,54 @@ def slug_from_title(title: str) -> str:
 
 
 def fetch_hero_image(query: str) -> dict | None:
-    """Fetch a royalty-free image from Unsplash. Returns dict with url, srcset, credit, alt."""
-    if not UNSPLASH_ACCESS_KEY:
-        log.info("No Unsplash key, skipping image")
+    """Fetch a royalty-free hero image from Pexels (much better variety than Unsplash)."""
+    api_key = os.environ.get("PEXELS_API_KEY", "")
+    if not api_key:
+        log.info("No Pexels API key found, skipping hero image")
         return None
+
     try:
         r = http.get(
-            "https://api.unsplash.com/search/photos",
+            "https://api.pexels.com/v1/search",
             params={
                 "query": query,
-                "per_page": 5,
+                "per_page": 8,
                 "orientation": "landscape",
-                "content_filter": "high",
             },
-            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            headers={"Authorization": api_key},
             timeout=15,
         )
         r.raise_for_status()
-        results = r.json().get("results", [])
+        results = r.json().get("photos", [])
+
         if not results:
-            # Fallback to generic Japan skiing query
             r2 = http.get(
-                "https://api.unsplash.com/search/photos",
-                params={"query": "japan skiing snow mountain", "per_page": 5, "orientation": "landscape"},
-                headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+                "https://api.pexels.com/v1/search",
+                params={"query": "japan powder skiing mountain", "per_page": 8, "orientation": "landscape"},
+                headers={"Authorization": api_key},
                 timeout=15,
             )
             r2.raise_for_status()
-            results = r2.json().get("results", [])
+            results = r2.json().get("photos", [])
+
         if not results:
+            log.warning("No images found even with fallback query")
             return None
 
-        # Pick a random-ish result to avoid repeating the same image
-        photo = random.choice(results[:3])
+        import random
+        photo = random.choice(results)
 
-        # Unsplash requires triggering a download endpoint for tracking
-        dl_url = photo.get("links", {}).get("download_location", "")
-        if dl_url:
-            try:
-                http.get(dl_url, headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}, timeout=5)
-            except Exception:
-                pass
-
-        # Build a responsive srcset from the raw URL (Unsplash supports ?w= resizing)
-        raw = photo["urls"]["raw"]
-        sep = "&" if "?" in raw else "?"
-
-        def sized(w: int, q: int = 80) -> str:
-            return f"{raw}{sep}auto=format&fit=crop&w={w}&q={q}"
-
+        src = photo["src"]
         return {
-            "url": sized(1200, 82),
-            "srcset": ", ".join([
-                f"{sized(480, 75)} 480w",
-                f"{sized(768, 78)} 768w",
-                f"{sized(1200, 82)} 1200w",
-                f"{sized(1600, 85)} 1600w",
-            ]),
-            "sizes": "(max-width: 680px) 100vw, 680px",
-            "credit_name": photo["user"]["name"],
-            "credit_link": photo["user"]["links"]["html"] + "?utm_source=piquno&utm_medium=referral",
-            "unsplash_link": "https://unsplash.com/?utm_source=piquno&utm_medium=referral",
-            "alt": photo.get("alt_description") or f"Japan skiing: {query}",
+            "url": src["large2x"],
+            "srcset": f"{src['large']} 1024w, {src['large2x']} 1280w, {src['original']} 1920w",
+            "alt": photo.get("alt", "Japan skiing"),
+            "credit": f"Photo by {photo['photographer']} on Pexels",
+            "credit_url": photo["photographer_url"],
         }
+
     except Exception as e:
-        log.warning(f"Unsplash fetch failed: {e}")
+        log.warning(f"Pexels image fetch failed: {e}")
         return None
 
 
