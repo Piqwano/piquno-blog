@@ -1342,6 +1342,11 @@ def _upload_bsky_blob(session_auth: dict, image_url: str) -> dict | None:
             img_resp.raise_for_status()
             img_bytes = img_resp.content
             content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        # Guard: CDN errors sometimes return an HTML body with the right HTTP
+        # status — uploading that wastes the Bluesky quota and fails anyway.
+        if not content_type.startswith("image/"):
+            log.warning(f"Bluesky blob skipped — non-image content-type: {content_type}")
+            return None
         if len(img_bytes) > 950_000:
             log.warning("Image too large for Bluesky blob; skipping thumbnail")
             return None
@@ -1449,6 +1454,10 @@ def post_to_bluesky(title: str, excerpt: str, url: str, tag: str = "", image_url
                 "repo": auth["did"],
                 "collection": "app.bsky.feed.post",
                 "record": record,
+                # Server-side lexicon validation: catches malformed facet byte
+                # ranges / embed shapes at ingest instead of letting bad records
+                # land and break clients.
+                "validate": True,
             },
             timeout=20,
         )
@@ -1458,7 +1467,85 @@ def post_to_bluesky(title: str, excerpt: str, url: str, tag: str = "", image_url
         log.warning(f"Bluesky post failed: {e}")
 
 
-def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
+def _twitter_oauth_header(method: str, base_url: str) -> str:
+    """Build an OAuth 1.0a Authorization header for (method, base_url).
+
+    Per RFC 5849 §3.4.1.3.1 the request body is part of the signature base
+    string ONLY when the body is `application/x-www-form-urlencoded`. Both
+    our calls (JSON body for /2/tweets, multipart for /1.1/media/upload.json)
+    are exempt, so this helper covers both with just OAuth params.
+    """
+    params = {
+        "oauth_consumer_key": TWITTER_API_KEY,
+        "oauth_nonce": secrets.token_hex(16),
+        "oauth_signature_method": "HMAC-SHA1",
+        "oauth_timestamp": str(int(time.time())),
+        "oauth_token": TWITTER_ACCESS_TOKEN,
+        "oauth_version": "1.0",
+    }
+    param_string = "&".join(
+        f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+        for k, v in sorted(params.items())
+    )
+    base_string = (
+        f"{method.upper()}&{urllib.parse.quote(base_url, safe='')}"
+        f"&{urllib.parse.quote(param_string, safe='')}"
+    )
+    signing_key = (
+        f"{urllib.parse.quote(TWITTER_API_SECRET, safe='')}"
+        f"&{urllib.parse.quote(TWITTER_ACCESS_SECRET, safe='')}"
+    )
+    params["oauth_signature"] = base64.b64encode(
+        hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha1).digest()
+    ).decode()
+    return "OAuth " + ", ".join(
+        f'{urllib.parse.quote(k, safe="")}="{urllib.parse.quote(v, safe="")}"'
+        for k, v in sorted(params.items())
+    )
+
+
+def _upload_twitter_media(image_url: str) -> str | None:
+    """Upload an image to v1.1 media/upload. Returns media_id_string or None.
+
+    X v2 /tweets cannot upload media itself — you must use the v1.1 endpoint
+    first (it still works with OAuth 1.0a User Context keys). Simple mode
+    (no INIT/APPEND/FINALIZE) handles files up to 5MB; our Pexels thumb is
+    always well under that.
+    """
+    if not image_url or not TWITTER_API_KEY or not TWITTER_ACCESS_TOKEN:
+        return None
+    try:
+        img_resp = http.get(image_url, timeout=15)
+        img_resp.raise_for_status()
+        content_type = img_resp.headers.get("content-type", "").split(";")[0].strip()
+        if not content_type.startswith("image/"):
+            log.warning(f"Twitter media skipped — non-image content-type: {content_type}")
+            return None
+        img_bytes = img_resp.content
+        if len(img_bytes) > 4_900_000:
+            log.warning("Twitter media skipped — image larger than simple-upload 5MB limit")
+            return None
+
+        base_url = "https://upload.twitter.com/1.1/media/upload.json"
+        r = http_strict.post(
+            base_url,
+            headers={"Authorization": _twitter_oauth_header("POST", base_url)},
+            files={"media": ("image", img_bytes, content_type)},
+            timeout=30,
+        )
+        if r.status_code >= 400:
+            log.warning(f"Twitter media upload failed: HTTP {r.status_code} body={r.text[:300]}")
+            return None
+        media_id = r.json().get("media_id_string")
+        if media_id:
+            log.info(f"Uploaded image to Twitter (media_id={media_id})")
+        return media_id
+    except Exception as e:
+        log.warning(f"Twitter media upload error: {e}")
+        return None
+
+
+def post_to_twitter(title: str, excerpt: str, url: str, tag: str = "", image_url: str = ""):
     """Post to Twitter/X using OAuth 1.0a user context.
 
     The v2 /tweets endpoint supports OAuth 1.0a User Context even though JSON bodies
@@ -1468,11 +1555,10 @@ def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
         return
 
     try:
-        # X free-tier is 500 writes/month. Keep it tight: title, URL, 2-3 hashtags.
-        hashtags = get_random_hashtags(tag=tag, count=3)
+        # X de-prioritizes posts with 3+ hashtags (per X's own 2023 guidance),
+        # so we default to 2 and fall back to none if the budget doesn't fit.
+        hashtags = get_random_hashtags(tag=tag, count=2)
         tweet_text = f"{title}\n\n{url}\n\n{hashtags}"
-        if len(tweet_text) > 280:
-            tweet_text = f"{title}\n\n{url}\n\n" + get_random_hashtags(tag=tag, count=2)
         if len(tweet_text) > 280:
             tweet_text = f"{title}\n\n{url}"
         if len(tweet_text) > 280:
@@ -1480,55 +1566,34 @@ def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
             max_title_len = max(10, 280 - len(url) - 2 - 1)
             tweet_text = title[:max_title_len].rstrip() + "…\n\n" + url
 
-        oauth_nonce = secrets.token_hex(16)
-        oauth_timestamp = str(int(time.time()))
-
-        params = {
-            "oauth_consumer_key": TWITTER_API_KEY,
-            "oauth_nonce": oauth_nonce,
-            "oauth_signature_method": "HMAC-SHA1",
-            "oauth_timestamp": oauth_timestamp,
-            "oauth_token": TWITTER_ACCESS_TOKEN,
-            "oauth_version": "1.0",
-        }
+        # Attach the hero image (v1.1 media/upload, referenced from v2 /tweets).
+        # Falls back to text-only on any upload failure so a broken image never
+        # blocks the tweet itself.
+        media_id = _upload_twitter_media(image_url) if image_url else None
 
         base_url = "https://api.twitter.com/2/tweets"
-        param_string = "&".join(
-            f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
-            for k, v in sorted(params.items())
-        )
-        base_string = (
-            f"POST&{urllib.parse.quote(base_url, safe='')}"
-            f"&{urllib.parse.quote(param_string, safe='')}"
-        )
-        signing_key = (
-            f"{urllib.parse.quote(TWITTER_API_SECRET, safe='')}"
-            f"&{urllib.parse.quote(TWITTER_ACCESS_SECRET, safe='')}"
-        )
-
-        signature = base64.b64encode(
-            hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha1).digest()
-        ).decode()
-
-        params["oauth_signature"] = signature
-        auth_header = "OAuth " + ", ".join(
-            f'{urllib.parse.quote(k, safe="")}="{urllib.parse.quote(v, safe="")}"'
-            for k, v in sorted(params.items())
-        )
+        payload: dict = {"text": tweet_text}
+        if media_id:
+            payload["media"] = {"media_ids": [media_id]}
 
         r = http_strict.post(
             base_url,
             headers={
-                "Authorization": auth_header,
+                "Authorization": _twitter_oauth_header("POST", base_url),
                 "Content-Type": "application/json",
             },
-            json={"text": tweet_text},
+            json=payload,
             timeout=20,
         )
+        # Surface rate-limit headroom when it gets low so we see it before a 429.
+        remaining = r.headers.get("x-rate-limit-remaining")
+        if remaining and remaining.isdigit() and int(remaining) < 10:
+            reset = r.headers.get("x-rate-limit-reset", "?")
+            log.warning(f"Twitter rate-limit headroom low: {remaining} left, resets at {reset}")
         if r.status_code >= 400:
             log.warning(f"Twitter post failed: HTTP {r.status_code} body={r.text[:300]}")
             return
-        log.info(f"Posted to Twitter: {title}")
+        log.info(f"Posted to Twitter{' with media' if media_id else ''}: {title}")
     except Exception as e:
         log.warning(f"Twitter post failed: {e}")
 
@@ -1546,7 +1611,7 @@ def share_to_socials(new_posts: list[dict]):
         post_to_bluesky(p["title"], p.get("excerpt", ""), url, tag, image_url=image_url)
         # Add a realistic delay + jitter between platforms and between posts
         time.sleep(random.randint(8, 22))
-        post_to_twitter(p["title"], p.get("excerpt", ""), url, tag)
+        post_to_twitter(p["title"], p.get("excerpt", ""), url, tag, image_url=image_url)
         if i < len(new_posts) - 1:
             time.sleep(random.randint(60, 180))  # 1–3 min between posts
 
