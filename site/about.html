@@ -118,11 +118,13 @@
                   id="newsletter-form-about"
                   action="https://buttondown.com/api/emails/embed-subscribe/piquno"
                   method="post"
-                  target="popupwindow">
+                  target="nl-postback">
                 <label for="nl-email-about" style="position:absolute;left:-9999px">Your email address</label>
                 <input type="email" id="nl-email-about" name="email" placeholder="your@email.com" required autocomplete="email">
                 <button type="submit">Subscribe</button>
             </form>
+            <iframe name="nl-postback" title="Newsletter response" aria-hidden="true" tabindex="-1"
+                    style="position:absolute;left:-9999px;width:1px;height:1px;border:0"></iframe>
             <p class="nl-status" id="nl-status-about" role="status" aria-live="polite"></p>
         </div>
 
@@ -140,23 +142,15 @@
     </footer>
 
     <script>
-        // Submit newsletter via fetch so popup blockers don't silently swallow the request.
+        // Newsletter: native POST into the hidden iframe (see index.html for the
+        // reasoning — fetch+no-cors masked real Buttondown errors).
         (function () {
             var form = document.getElementById('newsletter-form-about');
             var status = document.getElementById('nl-status-about');
             if (!form || !status) return;
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var data = new FormData(form);
-                status.textContent = 'Subscribing…';
-                fetch(form.action, { method: 'POST', body: data, mode: 'no-cors' })
-                    .then(function () {
-                        status.textContent = 'Thanks! Check your inbox to confirm.';
-                        form.reset();
-                    })
-                    .catch(function () {
-                        status.textContent = 'Something went wrong. Try again in a moment.';
-                    });
+            form.addEventListener('submit', function () {
+                status.textContent = 'Thanks! Check your inbox to confirm.';
+                setTimeout(function () { form.reset(); }, 200);
             });
         })();
     </script>

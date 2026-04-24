@@ -316,6 +316,39 @@ def slug_from_title(title: str) -> str:
     return slug[:cut].rstrip("-")
 
 
+# Pool of evocative queries for the daily roundup hero. Previously the bot
+# asked Pexels for the same phrase every day, so the homepage would recycle
+# through the same ~15 photos. Picking from this pool each run gives the
+# blog a fresh visual mood without any extra API cost.
+_ROUNDUP_IMAGE_QUERIES = [
+    "niseko powder japan",
+    "hakuba valley japan ski",
+    "myoko snow japan",
+    "nozawa onsen winter",
+    "furano japan ski resort",
+    "rusutsu japan snow",
+    "shiga kogen skiing",
+    "appi kogen japan",
+    "hokkaido powder skiing",
+    "japan alps ski",
+    "japan backcountry snowboarding",
+    "japanese mountain skiing snow",
+    "japan onsen snow winter",
+    "japan ski lift mountain",
+    "japan snowboarding tree powder",
+    "japanese alps winter landscape",
+    "sapporo snow ski",
+    "tokyo japan snow mountain",
+    "japan chairlift winter",
+    "japan ski village night",
+]
+
+
+def _roundup_image_query() -> str:
+    """Random evocative Japan-ski query for the daily roundup hero."""
+    return random.choice(_ROUNDUP_IMAGE_QUERIES)
+
+
 def fetch_hero_image(query: str) -> dict | None:
     """Fetch a royalty-free hero image from Pexels (much better variety than Unsplash)."""
     api_key = os.environ.get("PEXELS_API_KEY", "")
@@ -1561,7 +1594,7 @@ def main():
         if slug in existing_slugs:
             slug = f"{slug}-{int(time.time()) % 10000}"
         now = datetime.now(timezone.utc)
-        image = fetch_hero_image("japan skiing snow powder mountain")
+        image = fetch_hero_image(_roundup_image_query())
         (POSTS_DIR / f"{slug}.html").write_text(
             build_post_html(roundup, slug, now.isoformat(), image,
                             related=existing_posts)
