@@ -343,14 +343,22 @@ def fetch_hero_image(query: str) -> dict | None:
 
         photo = random.choice(results)
         src = photo["src"]
+        # Pexels serves via an Imgix-backed CDN. Strip the preset query and
+        # request an exact crop for og:image (1200×630 is the Facebook/Twitter
+        # large-image spec) to stop scrapers from rejecting oversized images.
+        original_base = src["original"].split("?", 1)[0]
+        og_url = f"{original_base}?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop"
         # Build responsive srcset. Pexels "large2x" ≈ 1880×1300, "large" ≈ 940×650.
         # `sizes` matches the .post-page max-width (680px) in styles.css.
         return {
             "url": src["large2x"],
+            "og_url": og_url,
             "thumb_url": src.get("large") or src["large2x"],  # smaller variant for Bluesky blob
             "srcset": f"{src['large']} 1024w, {src['large2x']} 1880w, {src['original']} 2400w",
             "sizes": "(max-width: 680px) 100vw, 680px",
             "alt": photo.get("alt") or query,
+            "width": photo.get("width") or 1880,
+            "height": photo.get("height") or 1253,
             "credit_name": photo["photographer"],
             "credit_link": photo["photographer_url"],
             "pexels_link": photo["url"],
@@ -714,15 +722,20 @@ def build_post_html(article: dict, slug: str, date_str: str,
         srcset = _escape_attr(image.get("srcset", ""))
         sizes = _escape_attr(image.get("sizes") or "(max-width: 680px) 100vw, 680px")
         srcset_attr = f' srcset="{srcset}" sizes="{sizes}"' if srcset else ""
+        # Use the actual Pexels photo aspect so the browser reserves the right
+        # amount of vertical space before the image loads (CLS prevention).
+        img_w = int(image.get("width") or 1880)
+        img_h = int(image.get("height") or 1253)
         hero_html = (
             f'<img class="hero-img" src="{src}"{srcset_attr} '
-            f'alt="{alt}" width="1200" height="675" '
+            f'alt="{alt}" width="{img_w}" height="{img_h}" '
             f'fetchpriority="high" decoding="async">'
             f'<p class="hero-credit">Photo by '
             f'<a href="{credit_link}" rel="nofollow noopener">{html.escape(image["credit_name"])}</a> '
             f'on <a href="{pexels_link}" rel="nofollow noopener">Pexels</a></p>'
         )
-        og_image = image["url"]
+        # og:image should be the 1200×630 social crop, not the huge hero file
+        og_image = image.get("og_url") or image["url"]
 
     # Post body is the Claude-generated HTML as-is.
     body_html = article["body_html"]
@@ -816,7 +829,7 @@ def build_post_html(article: dict, slug: str, date_str: str,
         social_meta_lines.append(f'<meta property="og:image" content="{_escape_attr(og_image)}">')
         social_meta_lines.append(f'<meta property="og:image:alt" content="{_escape_attr(image.get("alt", ""))}">')
         social_meta_lines.append('<meta property="og:image:width" content="1200">')
-        social_meta_lines.append('<meta property="og:image:height" content="675">')
+        social_meta_lines.append('<meta property="og:image:height" content="630">')
         social_meta_lines.append(f'<meta name="twitter:image" content="{_escape_attr(og_image)}">')
     social_meta = "\n    ".join(social_meta_lines)
 
