@@ -11,7 +11,7 @@ Environment variables (required):
   ANTHROPIC_API_KEY    - Your Anthropic API key
   NETLIFY_AUTH_TOKEN   - Netlify personal access token
   NETLIFY_SITE_ID      - Your Netlify site ID
-  UNSPLASH_ACCESS_KEY  - Unsplash API access key (free at unsplash.com/developers)
+  PEXELS_API_KEY       - Pexels API key (free at pexels.com/api)
 
 Environment variables (optional):
   CLAUDE_MODEL         - Defaults to claude-sonnet-4-6
@@ -54,7 +54,6 @@ from urllib3.util.retry import Retry
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 NETLIFY_AUTH_TOKEN = os.environ["NETLIFY_AUTH_TOKEN"]
 NETLIFY_SITE_ID = os.environ["NETLIFY_SITE_ID"]
-UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")  # Update when new models release
 
@@ -66,7 +65,7 @@ SITE_TAGLINE = "Japan Ski Journal"
 # Shared HTTP session with sensible retries for transient 5xx / 429.
 # Used for GET requests everywhere, plus the POSTs that are idempotent for our
 # purposes (Claude completions are safe to re-call, Netlify deploys are idempotent
-# at the resource level, Unsplash search returns the same result set).
+# at the resource level, Pexels search returns the same result set).
 _retry = Retry(
     total=4,
     connect=3,
@@ -324,44 +323,37 @@ def fetch_hero_image(query: str) -> dict | None:
         log.info("No Pexels API key found, skipping hero image")
         return None
 
-    try:
+    def _search(q: str) -> list:
         r = http.get(
             "https://api.pexels.com/v1/search",
-            params={
-                "query": query,
-                "per_page": 8,
-                "orientation": "landscape",
-            },
+            params={"query": q, "per_page": 15, "orientation": "landscape"},
             headers={"Authorization": api_key},
             timeout=15,
         )
         r.raise_for_status()
-        results = r.json().get("photos", [])
+        return r.json().get("photos", [])
 
+    try:
+        results = _search(query)
         if not results:
-            r2 = http.get(
-                "https://api.pexels.com/v1/search",
-                params={"query": "japan powder skiing mountain", "per_page": 8, "orientation": "landscape"},
-                headers={"Authorization": api_key},
-                timeout=15,
-            )
-            r2.raise_for_status()
-            results = r2.json().get("photos", [])
-
+            results = _search("japan powder skiing mountain")
         if not results:
-            log.warning("No images found even with fallback query")
+            log.warning("No Pexels images found even with fallback query")
             return None
 
-        import random
         photo = random.choice(results)
-
         src = photo["src"]
+        # Build responsive srcset. Pexels "large2x" ≈ 1880×1300, "large" ≈ 940×650.
+        # `sizes` matches the .post-page max-width (680px) in styles.css.
         return {
             "url": src["large2x"],
-            "srcset": f"{src['large']} 1024w, {src['large2x']} 1280w, {src['original']} 1920w",
-            "alt": photo.get("alt", "Japan skiing"),
-            "credit": f"Photo by {photo['photographer']} on Pexels",
-            "credit_url": photo["photographer_url"],
+            "thumb_url": src.get("large") or src["large2x"],  # smaller variant for Bluesky blob
+            "srcset": f"{src['large']} 1024w, {src['large2x']} 1880w, {src['original']} 2400w",
+            "sizes": "(max-width: 680px) 100vw, 680px",
+            "alt": photo.get("alt") or query,
+            "credit_name": photo["photographer"],
+            "credit_link": photo["photographer_url"],
+            "pexels_link": photo["url"],
         }
 
     except Exception as e:
@@ -717,10 +709,10 @@ def build_post_html(article: dict, slug: str, date_str: str,
     if image:
         alt = _escape_attr(image.get("alt") or article.get("title", ""))
         credit_link = _escape_attr(image["credit_link"])
-        unsplash_link = _escape_attr(image["unsplash_link"])
+        pexels_link = _escape_attr(image["pexels_link"])
         src = _escape_attr(image["url"])
         srcset = _escape_attr(image.get("srcset", ""))
-        sizes = _escape_attr(image.get("sizes", ""))
+        sizes = _escape_attr(image.get("sizes") or "(max-width: 680px) 100vw, 680px")
         srcset_attr = f' srcset="{srcset}" sizes="{sizes}"' if srcset else ""
         hero_html = (
             f'<img class="hero-img" src="{src}"{srcset_attr} '
@@ -728,7 +720,7 @@ def build_post_html(article: dict, slug: str, date_str: str,
             f'fetchpriority="high" decoding="async">'
             f'<p class="hero-credit">Photo by '
             f'<a href="{credit_link}" rel="nofollow noopener">{html.escape(image["credit_name"])}</a> '
-            f'on <a href="{unsplash_link}" rel="nofollow noopener">Unsplash</a></p>'
+            f'on <a href="{pexels_link}" rel="nofollow noopener">Pexels</a></p>'
         )
         og_image = image["url"]
 
@@ -1259,12 +1251,17 @@ def _upload_bsky_blob(session_auth: dict, image_url: str) -> dict | None:
         img_bytes = img_resp.content
         content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
         if len(img_bytes) > 900_000:
-            # Bluesky blob limit ~1MB; request a smaller size from Unsplash if so
-            # Try a smaller variant if this is an Unsplash URL
-            sep = "&" if "?" in image_url else "?"
-            smaller = re.sub(r"([?&])w=\d+", r"\1w=800", image_url)
-            if smaller == image_url:
-                smaller = f"{image_url}{sep}w=800"
+            # Bluesky blob limit ~1MB. Try to fetch a smaller variant from the CDN.
+            # Pexels: strip/override size query params (`?auto=compress&cs=tinysrgb&h=650&w=940` etc).
+            # Unsplash: replace `w=XXXX` with `w=800`.
+            if "images.pexels.com" in image_url:
+                base = image_url.split("?", 1)[0]
+                smaller = f"{base}?auto=compress&cs=tinysrgb&h=650"
+            else:
+                smaller = re.sub(r"([?&])w=\d+", r"\1w=800", image_url)
+                if smaller == image_url:
+                    sep = "&" if "?" in image_url else "?"
+                    smaller = f"{image_url}{sep}w=800"
             img_resp = http.get(smaller, timeout=15)
             img_resp.raise_for_status()
             img_bytes = img_resp.content
@@ -1529,7 +1526,7 @@ def main():
         post_entry = {
             "title": roundup["title"], "slug": slug, "date": now.isoformat(),
             "tag": roundup["tag"], "excerpt": roundup.get("excerpt", ""),
-            "image_url": image["url"] if image else "",
+            "image_url": (image.get("thumb_url") or image["url"]) if image else "",
         }
         existing_posts.insert(0, post_entry)
         existing_slugs.add(slug)
@@ -1556,7 +1553,7 @@ def main():
         post_entry = {
             "title": feature["title"], "slug": slug, "date": now.isoformat(),
             "tag": feature["tag"], "excerpt": feature.get("excerpt", ""),
-            "image_url": image["url"] if image else "",
+            "image_url": (image.get("thumb_url") or image["url"]) if image else "",
         }
         existing_posts.insert(0, post_entry)
         existing_slugs.add(slug)

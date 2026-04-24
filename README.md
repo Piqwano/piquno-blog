@@ -58,7 +58,7 @@ Key design choices:
 
 * **Anthropic API key:** <https://console.anthropic.com/settings/keys>
 * **Netlify personal access token:** <https://app.netlify.com/user/applications#personal-access-tokens>
-* **Unsplash access key:** <https://unsplash.com/developers> — create a free app, copy the Access Key.
+* **Pexels API key:** <https://www.pexels.com/api/> — sign up, request an API key (free, no credit card).
 
 Optional (for social auto-posting):
 
@@ -101,7 +101,7 @@ Commit those files alongside the SVG.
    | `ANTHROPIC_API_KEY` | yes | |
    | `NETLIFY_AUTH_TOKEN` | yes | |
    | `NETLIFY_SITE_ID` | yes | From step 1. |
-   | `UNSPLASH_ACCESS_KEY` | yes | Hero images. |
+   | `PEXELS_API_KEY` | yes | Hero images. |
    | `CLAUDE_MODEL` | no | Defaults to `claude-sonnet-4-6`. |
    | `SITE_URL` | no | Defaults to `https://piquno.com`. Useful for staging. |
    | `BLUESKY_HANDLE` | no | e.g. `piqunoski.bsky.social`. |
@@ -126,7 +126,7 @@ Each day the bot:
 2. Pulls RSS from a set of skiing news sites (see `RSS_FEEDS` in `bot.py`).
 3. Filters for Japan-relevant items by keyword.
 4. Calls Claude twice — once for a daily roundup, once for a feature article.
-5. Fetches a relevant Unsplash image for each.
+5. Fetches a relevant Pexels image for each.
 6. Renders post HTML with proper OG/Twitter/JSON-LD meta.
 7. Regenerates sitemap.xml, feed.xml, robots.txt.
 8. Rewrites `index.html` post-list with server-rendered cards.
