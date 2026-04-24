@@ -548,7 +548,7 @@ def generate_daily_roundup(rss_items: list[dict]) -> dict | None:
         for it in rss_items[:10]
     )
 
-        system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
+    system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
 
 Voice rules:
 - Write like a mate who’s been there — warm, practical, slightly sarcastic when needed, zero corporate fluff.
@@ -564,6 +564,32 @@ Content rules:
 - Be specific — name resorts, snow depths, runs, towns.
 - Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced"."""
 
+    prompt = f"""Today is {today}. Write a DAILY ROUNDUP post covering Japan's ski regions.
+
+Resort database by region:
+{resort_db}
+
+Recent skiing news:
+{sources_text}
+
+Organise by REGION with <h2> tags. Cover what's newsworthy. Rotate minor resorts over time.
+
+If off-season (April–November), pivot to: pre-season forecasts, resort upgrades, pass deals, or "what to know for next season".
+
+WRITING STYLE:
+- Write like an Aussie mate giving a mate a rundown. Natural, direct, occasionally opinionated.
+- Short, varied sentence lengths. Mix long and short. Sometimes just a few words.
+- Use contractions freely (don't, can't, it's, there's, you'll).
+- Be specific. Name resorts, snow depths, runs, towns. No filler adjectives.
+- Include your honest take: “I’d rather be at X than Y right now because…”
+
+Respond ONLY with a JSON object (no markdown fences):
+{{
+  "title": "Japan Snow Report - compelling headline for {today}",
+  "tag": "Snow Report",
+  "excerpt": "One sentence, max 160 chars",
+  "body_html": "700-1000 words. <h2> for regions, <p> for text. Be specific - name resorts, conditions, snow depths. Write like an Aussie mate who checks the cams every morning. Include practical tips."
+}}"""
     prompt = f"""Today is {today}. Write a DAILY ROUNDUP post covering Japan's ski regions.
 
 Resort database by region:
