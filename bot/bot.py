@@ -11,7 +11,7 @@ Environment variables (required):
   ANTHROPIC_API_KEY    - Your Anthropic API key
   NETLIFY_AUTH_TOKEN   - Netlify personal access token
   NETLIFY_SITE_ID      - Your Netlify site ID
-  UNSPLASH_ACCESS_KEY  - Unsplash API access key (free at unsplash.com/developers)
+  PEXELS_API_KEY       - Pexels API key (free at pexels.com/api)
 
 Environment variables (optional):
   CLAUDE_MODEL         - Defaults to claude-sonnet-4-6
@@ -54,7 +54,6 @@ from urllib3.util.retry import Retry
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 NETLIFY_AUTH_TOKEN = os.environ["NETLIFY_AUTH_TOKEN"]
 NETLIFY_SITE_ID = os.environ["NETLIFY_SITE_ID"]
-UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")  # Update when new models release
 
@@ -66,7 +65,7 @@ SITE_TAGLINE = "Japan Ski Journal"
 # Shared HTTP session with sensible retries for transient 5xx / 429.
 # Used for GET requests everywhere, plus the POSTs that are idempotent for our
 # purposes (Claude completions are safe to re-call, Netlify deploys are idempotent
-# at the resource level, Unsplash search returns the same result set).
+# at the resource level, Pexels search returns the same result set).
 _retry = Retry(
     total=4,
     connect=3,
@@ -317,6 +316,39 @@ def slug_from_title(title: str) -> str:
     return slug[:cut].rstrip("-")
 
 
+# Pool of evocative queries for the daily roundup hero. Previously the bot
+# asked Pexels for the same phrase every day, so the homepage would recycle
+# through the same ~15 photos. Picking from this pool each run gives the
+# blog a fresh visual mood without any extra API cost.
+_ROUNDUP_IMAGE_QUERIES = [
+    "niseko powder japan",
+    "hakuba valley japan ski",
+    "myoko snow japan",
+    "nozawa onsen winter",
+    "furano japan ski resort",
+    "rusutsu japan snow",
+    "shiga kogen skiing",
+    "appi kogen japan",
+    "hokkaido powder skiing",
+    "japan alps ski",
+    "japan backcountry snowboarding",
+    "japanese mountain skiing snow",
+    "japan onsen snow winter",
+    "japan ski lift mountain",
+    "japan snowboarding tree powder",
+    "japanese alps winter landscape",
+    "sapporo snow ski",
+    "tokyo japan snow mountain",
+    "japan chairlift winter",
+    "japan ski village night",
+]
+
+
+def _roundup_image_query() -> str:
+    """Random evocative Japan-ski query for the daily roundup hero."""
+    return random.choice(_ROUNDUP_IMAGE_QUERIES)
+
+
 def fetch_hero_image(query: str) -> dict | None:
     """Fetch a royalty-free hero image from Pexels (much better variety than Unsplash)."""
     api_key = os.environ.get("PEXELS_API_KEY", "")
@@ -324,44 +356,45 @@ def fetch_hero_image(query: str) -> dict | None:
         log.info("No Pexels API key found, skipping hero image")
         return None
 
-    try:
+    def _search(q: str) -> list:
         r = http.get(
             "https://api.pexels.com/v1/search",
-            params={
-                "query": query,
-                "per_page": 8,
-                "orientation": "landscape",
-            },
+            params={"query": q, "per_page": 15, "orientation": "landscape"},
             headers={"Authorization": api_key},
             timeout=15,
         )
         r.raise_for_status()
-        results = r.json().get("photos", [])
+        return r.json().get("photos", [])
 
+    try:
+        results = _search(query)
         if not results:
-            r2 = http.get(
-                "https://api.pexels.com/v1/search",
-                params={"query": "japan powder skiing mountain", "per_page": 8, "orientation": "landscape"},
-                headers={"Authorization": api_key},
-                timeout=15,
-            )
-            r2.raise_for_status()
-            results = r2.json().get("photos", [])
-
+            results = _search("japan powder skiing mountain")
         if not results:
-            log.warning("No images found even with fallback query")
+            log.warning("No Pexels images found even with fallback query")
             return None
 
-        import random
         photo = random.choice(results)
-
         src = photo["src"]
+        # Pexels serves via an Imgix-backed CDN. Strip the preset query and
+        # request an exact crop for og:image (1200×630 is the Facebook/Twitter
+        # large-image spec) to stop scrapers from rejecting oversized images.
+        original_base = src["original"].split("?", 1)[0]
+        og_url = f"{original_base}?auto=compress&cs=tinysrgb&w=1200&h=630&fit=crop"
+        # Build responsive srcset. Pexels "large2x" ≈ 1880×1300, "large" ≈ 940×650.
+        # `sizes` matches the .post-page max-width (680px) in styles.css.
         return {
             "url": src["large2x"],
-            "srcset": f"{src['large']} 1024w, {src['large2x']} 1280w, {src['original']} 1920w",
-            "alt": photo.get("alt", "Japan skiing"),
-            "credit": f"Photo by {photo['photographer']} on Pexels",
-            "credit_url": photo["photographer_url"],
+            "og_url": og_url,
+            "thumb_url": src.get("large") or src["large2x"],  # smaller variant for Bluesky blob
+            "srcset": f"{src['large']} 1024w, {src['large2x']} 1880w, {src['original']} 2400w",
+            "sizes": "(max-width: 680px) 100vw, 680px",
+            "alt": photo.get("alt") or query,
+            "width": photo.get("width") or 1880,
+            "height": photo.get("height") or 1253,
+            "credit_name": photo["photographer"],
+            "credit_link": photo["photographer_url"],
+            "pexels_link": photo["url"],
         }
 
     except Exception as e:
@@ -717,20 +750,25 @@ def build_post_html(article: dict, slug: str, date_str: str,
     if image:
         alt = _escape_attr(image.get("alt") or article.get("title", ""))
         credit_link = _escape_attr(image["credit_link"])
-        unsplash_link = _escape_attr(image["unsplash_link"])
+        pexels_link = _escape_attr(image["pexels_link"])
         src = _escape_attr(image["url"])
         srcset = _escape_attr(image.get("srcset", ""))
-        sizes = _escape_attr(image.get("sizes", ""))
+        sizes = _escape_attr(image.get("sizes") or "(max-width: 680px) 100vw, 680px")
         srcset_attr = f' srcset="{srcset}" sizes="{sizes}"' if srcset else ""
+        # Use the actual Pexels photo aspect so the browser reserves the right
+        # amount of vertical space before the image loads (CLS prevention).
+        img_w = int(image.get("width") or 1880)
+        img_h = int(image.get("height") or 1253)
         hero_html = (
             f'<img class="hero-img" src="{src}"{srcset_attr} '
-            f'alt="{alt}" width="1200" height="675" '
+            f'alt="{alt}" width="{img_w}" height="{img_h}" '
             f'fetchpriority="high" decoding="async">'
             f'<p class="hero-credit">Photo by '
             f'<a href="{credit_link}" rel="nofollow noopener">{html.escape(image["credit_name"])}</a> '
-            f'on <a href="{unsplash_link}" rel="nofollow noopener">Unsplash</a></p>'
+            f'on <a href="{pexels_link}" rel="nofollow noopener">Pexels</a></p>'
         )
-        og_image = image["url"]
+        # og:image should be the 1200×630 social crop, not the huge hero file
+        og_image = image.get("og_url") or image["url"]
 
     # Post body is the Claude-generated HTML as-is.
     body_html = article["body_html"]
@@ -759,13 +797,27 @@ def build_post_html(article: dict, slug: str, date_str: str,
                 p_slug = _escape_attr(p.get("slug", ""))
                 p_tag = html.escape(p.get("tag", ""))
                 p_tag_class = tag_to_slug(p.get("tag", ""))
+                p_image = p.get("image_url") or ""
+                p_thumb = ""
+                p_class = "post-card"
+                if p_image:
+                    p_class = "post-card has-thumb"
+                    p_thumb = (
+                        f'<div class="post-card-thumb">'
+                        f'<img src="{_escape_attr(p_image)}" alt="" '
+                        f'width="300" height="200" loading="lazy" decoding="async">'
+                        f'</div>'
+                    )
                 items.append(
-                    f'<a class="post-card" href="/posts/{p_slug}.html">'
+                    f'<a class="{p_class}" href="/posts/{p_slug}.html">'
+                    f'{p_thumb}'
+                    f'<div class="post-card-body">'
                     f'<div class="post-meta">'
                     f'<span class="post-tag {p_tag_class}">{p_tag}</span>'
                     f'</div>'
                     f'<h3 class="post-title">{p_title}</h3>'
                     f'<p class="post-excerpt">{p_excerpt}</p>'
+                    f'</div>'
                     f'</a>'
                 )
             read_next_html = (
@@ -824,7 +876,7 @@ def build_post_html(article: dict, slug: str, date_str: str,
         social_meta_lines.append(f'<meta property="og:image" content="{_escape_attr(og_image)}">')
         social_meta_lines.append(f'<meta property="og:image:alt" content="{_escape_attr(image.get("alt", ""))}">')
         social_meta_lines.append('<meta property="og:image:width" content="1200">')
-        social_meta_lines.append('<meta property="og:image:height" content="675">')
+        social_meta_lines.append('<meta property="og:image:height" content="630">')
         social_meta_lines.append(f'<meta name="twitter:image" content="{_escape_attr(og_image)}">')
     social_meta = "\n    ".join(social_meta_lines)
 
@@ -981,14 +1033,30 @@ def _render_post_cards_html(posts: list[dict], limit: int = 20) -> str:
         title = html.escape(p.get("title", ""))
         excerpt = html.escape(p.get("excerpt", ""))
         slug = _escape_attr(p.get("slug", ""))
+        image_url = p.get("image_url") or ""
+        # Thumb is decorative (title acts as the a11y label on the link),
+        # so alt="" and intrinsic 3:2 dims reserve layout space pre-load.
+        thumb_html = ""
+        card_class = "post-card"
+        if image_url:
+            card_class = "post-card has-thumb"
+            thumb_html = (
+                f'          <div class="post-card-thumb">\n'
+                f'            <img src="{_escape_attr(image_url)}" alt="" '
+                f'width="300" height="200" loading="lazy" decoding="async">\n'
+                f'          </div>\n'
+            )
         lines.append(
-            f'        <a class="post-card" href="/posts/{slug}.html">\n'
-            f'          <div class="post-meta">\n'
-            f'            <span class="post-date">{date_fmt}</span>\n'
-            f'            <span class="post-tag {tag_class}">{html.escape(tag)}</span>\n'
+            f'        <a class="{card_class}" href="/posts/{slug}.html">\n'
+            f'{thumb_html}'
+            f'          <div class="post-card-body">\n'
+            f'            <div class="post-meta">\n'
+            f'              <span class="post-date">{date_fmt}</span>\n'
+            f'              <span class="post-tag {tag_class}">{html.escape(tag)}</span>\n'
+            f'            </div>\n'
+            f'            <h2 class="post-title">{title}</h2>\n'
+            f'            <p class="post-excerpt">{excerpt}</p>\n'
             f'          </div>\n'
-            f'          <h2 class="post-title">{title}</h2>\n'
-            f'          <p class="post-excerpt">{excerpt}</p>\n'
             f'        </a>'
         )
     return "\n".join(lines)
@@ -1259,16 +1327,26 @@ def _upload_bsky_blob(session_auth: dict, image_url: str) -> dict | None:
         img_bytes = img_resp.content
         content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
         if len(img_bytes) > 900_000:
-            # Bluesky blob limit ~1MB; request a smaller size from Unsplash if so
-            # Try a smaller variant if this is an Unsplash URL
-            sep = "&" if "?" in image_url else "?"
-            smaller = re.sub(r"([?&])w=\d+", r"\1w=800", image_url)
-            if smaller == image_url:
-                smaller = f"{image_url}{sep}w=800"
+            # Bluesky blob limit ~1MB. Try to fetch a smaller variant from the CDN.
+            # Pexels: strip/override size query params (`?auto=compress&cs=tinysrgb&h=650&w=940` etc).
+            # Unsplash: replace `w=XXXX` with `w=800`.
+            if "images.pexels.com" in image_url:
+                base = image_url.split("?", 1)[0]
+                smaller = f"{base}?auto=compress&cs=tinysrgb&h=650"
+            else:
+                smaller = re.sub(r"([?&])w=\d+", r"\1w=800", image_url)
+                if smaller == image_url:
+                    sep = "&" if "?" in image_url else "?"
+                    smaller = f"{image_url}{sep}w=800"
             img_resp = http.get(smaller, timeout=15)
             img_resp.raise_for_status()
             img_bytes = img_resp.content
             content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        # Guard: CDN errors sometimes return an HTML body with the right HTTP
+        # status — uploading that wastes the Bluesky quota and fails anyway.
+        if not content_type.startswith("image/"):
+            log.warning(f"Bluesky blob skipped — non-image content-type: {content_type}")
+            return None
         if len(img_bytes) > 950_000:
             log.warning("Image too large for Bluesky blob; skipping thumbnail")
             return None
@@ -1376,6 +1454,10 @@ def post_to_bluesky(title: str, excerpt: str, url: str, tag: str = "", image_url
                 "repo": auth["did"],
                 "collection": "app.bsky.feed.post",
                 "record": record,
+                # Server-side lexicon validation: catches malformed facet byte
+                # ranges / embed shapes at ingest instead of letting bad records
+                # land and break clients.
+                "validate": True,
             },
             timeout=20,
         )
@@ -1385,7 +1467,85 @@ def post_to_bluesky(title: str, excerpt: str, url: str, tag: str = "", image_url
         log.warning(f"Bluesky post failed: {e}")
 
 
-def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
+def _twitter_oauth_header(method: str, base_url: str) -> str:
+    """Build an OAuth 1.0a Authorization header for (method, base_url).
+
+    Per RFC 5849 §3.4.1.3.1 the request body is part of the signature base
+    string ONLY when the body is `application/x-www-form-urlencoded`. Both
+    our calls (JSON body for /2/tweets, multipart for /1.1/media/upload.json)
+    are exempt, so this helper covers both with just OAuth params.
+    """
+    params = {
+        "oauth_consumer_key": TWITTER_API_KEY,
+        "oauth_nonce": secrets.token_hex(16),
+        "oauth_signature_method": "HMAC-SHA1",
+        "oauth_timestamp": str(int(time.time())),
+        "oauth_token": TWITTER_ACCESS_TOKEN,
+        "oauth_version": "1.0",
+    }
+    param_string = "&".join(
+        f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+        for k, v in sorted(params.items())
+    )
+    base_string = (
+        f"{method.upper()}&{urllib.parse.quote(base_url, safe='')}"
+        f"&{urllib.parse.quote(param_string, safe='')}"
+    )
+    signing_key = (
+        f"{urllib.parse.quote(TWITTER_API_SECRET, safe='')}"
+        f"&{urllib.parse.quote(TWITTER_ACCESS_SECRET, safe='')}"
+    )
+    params["oauth_signature"] = base64.b64encode(
+        hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha1).digest()
+    ).decode()
+    return "OAuth " + ", ".join(
+        f'{urllib.parse.quote(k, safe="")}="{urllib.parse.quote(v, safe="")}"'
+        for k, v in sorted(params.items())
+    )
+
+
+def _upload_twitter_media(image_url: str) -> str | None:
+    """Upload an image to v1.1 media/upload. Returns media_id_string or None.
+
+    X v2 /tweets cannot upload media itself — you must use the v1.1 endpoint
+    first (it still works with OAuth 1.0a User Context keys). Simple mode
+    (no INIT/APPEND/FINALIZE) handles files up to 5MB; our Pexels thumb is
+    always well under that.
+    """
+    if not image_url or not TWITTER_API_KEY or not TWITTER_ACCESS_TOKEN:
+        return None
+    try:
+        img_resp = http.get(image_url, timeout=15)
+        img_resp.raise_for_status()
+        content_type = img_resp.headers.get("content-type", "").split(";")[0].strip()
+        if not content_type.startswith("image/"):
+            log.warning(f"Twitter media skipped — non-image content-type: {content_type}")
+            return None
+        img_bytes = img_resp.content
+        if len(img_bytes) > 4_900_000:
+            log.warning("Twitter media skipped — image larger than simple-upload 5MB limit")
+            return None
+
+        base_url = "https://upload.twitter.com/1.1/media/upload.json"
+        r = http_strict.post(
+            base_url,
+            headers={"Authorization": _twitter_oauth_header("POST", base_url)},
+            files={"media": ("image", img_bytes, content_type)},
+            timeout=30,
+        )
+        if r.status_code >= 400:
+            log.warning(f"Twitter media upload failed: HTTP {r.status_code} body={r.text[:300]}")
+            return None
+        media_id = r.json().get("media_id_string")
+        if media_id:
+            log.info(f"Uploaded image to Twitter (media_id={media_id})")
+        return media_id
+    except Exception as e:
+        log.warning(f"Twitter media upload error: {e}")
+        return None
+
+
+def post_to_twitter(title: str, excerpt: str, url: str, tag: str = "", image_url: str = ""):
     """Post to Twitter/X using OAuth 1.0a user context.
 
     The v2 /tweets endpoint supports OAuth 1.0a User Context even though JSON bodies
@@ -1395,11 +1555,10 @@ def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
         return
 
     try:
-        # X free-tier is 500 writes/month. Keep it tight: title, URL, 2-3 hashtags.
-        hashtags = get_random_hashtags(tag=tag, count=3)
+        # X de-prioritizes posts with 3+ hashtags (per X's own 2023 guidance),
+        # so we default to 2 and fall back to none if the budget doesn't fit.
+        hashtags = get_random_hashtags(tag=tag, count=2)
         tweet_text = f"{title}\n\n{url}\n\n{hashtags}"
-        if len(tweet_text) > 280:
-            tweet_text = f"{title}\n\n{url}\n\n" + get_random_hashtags(tag=tag, count=2)
         if len(tweet_text) > 280:
             tweet_text = f"{title}\n\n{url}"
         if len(tweet_text) > 280:
@@ -1407,55 +1566,34 @@ def post_to_twitter(title: str, excerpt: str, url: str, tag: str = ""):
             max_title_len = max(10, 280 - len(url) - 2 - 1)
             tweet_text = title[:max_title_len].rstrip() + "…\n\n" + url
 
-        oauth_nonce = secrets.token_hex(16)
-        oauth_timestamp = str(int(time.time()))
-
-        params = {
-            "oauth_consumer_key": TWITTER_API_KEY,
-            "oauth_nonce": oauth_nonce,
-            "oauth_signature_method": "HMAC-SHA1",
-            "oauth_timestamp": oauth_timestamp,
-            "oauth_token": TWITTER_ACCESS_TOKEN,
-            "oauth_version": "1.0",
-        }
+        # Attach the hero image (v1.1 media/upload, referenced from v2 /tweets).
+        # Falls back to text-only on any upload failure so a broken image never
+        # blocks the tweet itself.
+        media_id = _upload_twitter_media(image_url) if image_url else None
 
         base_url = "https://api.twitter.com/2/tweets"
-        param_string = "&".join(
-            f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
-            for k, v in sorted(params.items())
-        )
-        base_string = (
-            f"POST&{urllib.parse.quote(base_url, safe='')}"
-            f"&{urllib.parse.quote(param_string, safe='')}"
-        )
-        signing_key = (
-            f"{urllib.parse.quote(TWITTER_API_SECRET, safe='')}"
-            f"&{urllib.parse.quote(TWITTER_ACCESS_SECRET, safe='')}"
-        )
-
-        signature = base64.b64encode(
-            hmac.new(signing_key.encode(), base_string.encode(), hashlib.sha1).digest()
-        ).decode()
-
-        params["oauth_signature"] = signature
-        auth_header = "OAuth " + ", ".join(
-            f'{urllib.parse.quote(k, safe="")}="{urllib.parse.quote(v, safe="")}"'
-            for k, v in sorted(params.items())
-        )
+        payload: dict = {"text": tweet_text}
+        if media_id:
+            payload["media"] = {"media_ids": [media_id]}
 
         r = http_strict.post(
             base_url,
             headers={
-                "Authorization": auth_header,
+                "Authorization": _twitter_oauth_header("POST", base_url),
                 "Content-Type": "application/json",
             },
-            json={"text": tweet_text},
+            json=payload,
             timeout=20,
         )
+        # Surface rate-limit headroom when it gets low so we see it before a 429.
+        remaining = r.headers.get("x-rate-limit-remaining")
+        if remaining and remaining.isdigit() and int(remaining) < 10:
+            reset = r.headers.get("x-rate-limit-reset", "?")
+            log.warning(f"Twitter rate-limit headroom low: {remaining} left, resets at {reset}")
         if r.status_code >= 400:
             log.warning(f"Twitter post failed: HTTP {r.status_code} body={r.text[:300]}")
             return
-        log.info(f"Posted to Twitter: {title}")
+        log.info(f"Posted to Twitter{' with media' if media_id else ''}: {title}")
     except Exception as e:
         log.warning(f"Twitter post failed: {e}")
 
@@ -1473,7 +1611,7 @@ def share_to_socials(new_posts: list[dict]):
         post_to_bluesky(p["title"], p.get("excerpt", ""), url, tag, image_url=image_url)
         # Add a realistic delay + jitter between platforms and between posts
         time.sleep(random.randint(8, 22))
-        post_to_twitter(p["title"], p.get("excerpt", ""), url, tag)
+        post_to_twitter(p["title"], p.get("excerpt", ""), url, tag, image_url=image_url)
         if i < len(new_posts) - 1:
             time.sleep(random.randint(60, 180))  # 1–3 min between posts
 
@@ -1521,7 +1659,7 @@ def main():
         if slug in existing_slugs:
             slug = f"{slug}-{int(time.time()) % 10000}"
         now = datetime.now(timezone.utc)
-        image = fetch_hero_image("japan skiing snow powder mountain")
+        image = fetch_hero_image(_roundup_image_query())
         (POSTS_DIR / f"{slug}.html").write_text(
             build_post_html(roundup, slug, now.isoformat(), image,
                             related=existing_posts)
@@ -1529,7 +1667,7 @@ def main():
         post_entry = {
             "title": roundup["title"], "slug": slug, "date": now.isoformat(),
             "tag": roundup["tag"], "excerpt": roundup.get("excerpt", ""),
-            "image_url": image["url"] if image else "",
+            "image_url": (image.get("thumb_url") or image["url"]) if image else "",
         }
         existing_posts.insert(0, post_entry)
         existing_slugs.add(slug)
@@ -1556,7 +1694,7 @@ def main():
         post_entry = {
             "title": feature["title"], "slug": slug, "date": now.isoformat(),
             "tag": feature["tag"], "excerpt": feature.get("excerpt", ""),
-            "image_url": image["url"] if image else "",
+            "image_url": (image.get("thumb_url") or image["url"]) if image else "",
         }
         existing_posts.insert(0, post_entry)
         existing_slugs.add(slug)

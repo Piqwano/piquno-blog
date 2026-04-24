@@ -197,6 +197,44 @@ main {
     outline: none;
 }
 
+/* Thumbnail variant: thumb on the left, text on the right. Falls back to a
+   stacked layout on narrow viewports so the image isn't squeezed too small. */
+.post-card.has-thumb {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.post-card-thumb {
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--border);  /* placeholder while image loads */
+}
+
+.post-card-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.post-card.has-thumb:hover .post-card-thumb img,
+.post-card.has-thumb:focus-visible .post-card-thumb img {
+    transform: scale(1.03);
+}
+
+.post-card-body { min-width: 0; }  /* allow text truncation inside grid cell */
+
+@media (max-width: 520px) {
+    .post-card.has-thumb {
+        grid-template-columns: 110px 1fr;
+        gap: 1rem;
+    }
+}
+
 .post-meta {
     display: flex;
     gap: 1rem;

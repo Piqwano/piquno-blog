@@ -141,11 +141,15 @@
                   id="newsletter-form"
                   action="https://buttondown.com/api/emails/embed-subscribe/piquno"
                   method="post"
-                  target="popupwindow">
+                  target="nl-postback">
                 <label for="nl-email" style="position:absolute;left:-9999px">Your email address</label>
                 <input type="email" id="nl-email" name="email" placeholder="your@email.com" required autocomplete="email">
                 <button type="submit">Subscribe</button>
             </form>
+            <!-- Hidden iframe receives Buttondown's response so the user stays on the page
+                 and no popup is opened (popup blockers used to silently kill the old flow). -->
+            <iframe name="nl-postback" title="Newsletter response" aria-hidden="true" tabindex="-1"
+                    style="position:absolute;left:-9999px;width:1px;height:1px;border:0"></iframe>
             <p class="nl-status" id="nl-status" role="status" aria-live="polite"></p>
         </div>
     </main>
@@ -187,36 +191,41 @@
                     list.innerHTML = posts.slice(0, 20).map(function (p) {
                         var d = new Date(p.date);
                         var dateStr = isNaN(d) ? '' : fmt.format(d);
-                        return '<a class="post-card" href="/posts/' + encodeURIComponent(p.slug) + '.html">' +
-                            '<div class="post-meta">' +
-                              '<span class="post-date">' + esc(dateStr) + '</span>' +
-                              '<span class="post-tag ' + esc(tagSlug(p.tag)) + '">' + esc(p.tag) + '</span>' +
+                        var hasThumb = !!p.image_url;
+                        var thumbHtml = hasThumb
+                            ? '<div class="post-card-thumb">' +
+                                '<img src="' + esc(p.image_url) + '" alt="" width="300" height="200" loading="lazy" decoding="async">' +
+                              '</div>'
+                            : '';
+                        return '<a class="post-card' + (hasThumb ? ' has-thumb' : '') + '" href="/posts/' + encodeURIComponent(p.slug) + '.html">' +
+                            thumbHtml +
+                            '<div class="post-card-body">' +
+                              '<div class="post-meta">' +
+                                '<span class="post-date">' + esc(dateStr) + '</span>' +
+                                '<span class="post-tag ' + esc(tagSlug(p.tag)) + '">' + esc(p.tag) + '</span>' +
+                              '</div>' +
+                              '<h2 class="post-title">' + esc(p.title) + '</h2>' +
+                              '<p class="post-excerpt">' + esc(p.excerpt || '') + '</p>' +
                             '</div>' +
-                            '<h2 class="post-title">' + esc(p.title) + '</h2>' +
-                            '<p class="post-excerpt">' + esc(p.excerpt || '') + '</p>' +
                           '</a>';
                     }).join('');
                 })
                 .catch(function () { /* leave empty state visible */ });
         })();
 
-        // Newsletter form: submit via fetch so popup blockers don't silently kill it.
+        // Newsletter form: native submit into the hidden iframe. Buttondown's
+        // embed-subscribe endpoint doesn't expose CORS, so the previous
+        // fetch(..., mode: 'no-cors') returned an opaque response that always
+        // resolved — users saw "Thanks!" even when Buttondown rejected the
+        // request. The iframe-postback pattern lets the browser do the POST
+        // normally; confirmation is still the real signal (double opt-in email).
         (function () {
             var form = document.getElementById('newsletter-form');
             var status = document.getElementById('nl-status');
             if (!form || !status) return;
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                var data = new FormData(form);
-                status.textContent = 'Subscribing…';
-                fetch(form.action, { method: 'POST', body: data, mode: 'no-cors' })
-                    .then(function () {
-                        status.textContent = 'Thanks! Check your inbox to confirm.';
-                        form.reset();
-                    })
-                    .catch(function () {
-                        status.textContent = 'Something went wrong. Try again in a moment.';
-                    });
+            form.addEventListener('submit', function () {
+                status.textContent = 'Thanks! Check your inbox to confirm.';
+                setTimeout(function () { form.reset(); }, 200);
             });
         })();
     </script>
