@@ -453,9 +453,18 @@ def save_seen(seen: set):
         log.warning(f"Could not persist seen_urls.json: {e}")
 
 
-def call_claude(prompt: str, max_tokens: int = 3500) -> str | None:
-    """Call Claude's messages API. Returns the raw text response or None on failure."""
+def call_claude(prompt: str, system: str = "", max_tokens: int = 3500) -> str | None:
+    """Call Claude's messages API with system prompt and temperature."""
     try:
+        payload = {
+            "model": CLAUDE_MODEL,
+            "max_tokens": max_tokens,
+            "temperature": 0.75,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if system:
+            payload["system"] = system
+
         r = http.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -463,27 +472,20 @@ def call_claude(prompt: str, max_tokens: int = 3500) -> str | None:
                 "content-type": "application/json",
                 "anthropic-version": "2023-06-01",
             },
-            json={
-                "model": CLAUDE_MODEL,
-                "max_tokens": max_tokens,
-                "messages": [{"role": "user", "content": prompt}],
-            },
+            json=payload,
             timeout=120,
         )
         r.raise_for_status()
         body = r.json()
-        # Defensive: find the first text content block instead of blindly indexing
         for block in body.get("content", []):
             if block.get("type") == "text" and block.get("text"):
                 text = block["text"].strip()
-                # Strip markdown code fences if Claude wrapped the JSON
                 text = re.sub(r"^```(?:json)?\s*", "", text)
                 text = re.sub(r"\s*```\s*$", "", text)
                 return text.strip()
         log.error(f"Claude response had no text block: {body}")
         return None
     except requests.exceptions.HTTPError as e:
-        # On 4xx the retry adapter won't retry. Surface the response body for debugging.
         body = getattr(e.response, "text", "")[:500]
         log.error(f"Claude API HTTP {e.response.status_code}: {body}")
         return None
@@ -563,9 +565,23 @@ def generate_daily_roundup(rss_items: list[dict]) -> dict | None:
         for it in rss_items[:10]
     )
 
-    prompt = f"""You are a blog writer for Piquno, a Japan skiing journal written by an Australian skier.
+        system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
 
-Today is {today}. Write a DAILY ROUNDUP post covering Japan's ski regions.
+Voice rules:
+- Write like a mate who’s been there — warm, practical, slightly sarcastic when needed, zero corporate fluff.
+- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she’ll be right").
+- Every post must feel like it was written by a real person who actually skis Japan, not a generic AI.
+- Short paragraphs. Lots of white space. Never wall-of-text.
+- Always give the reader a clear takeaway or decision.
+
+Content rules:
+- Lead with the answer or strongest hook in the first 2–3 sentences.
+- Use descriptive H2 headings (never generic “Overview”).
+- Include at least one comparison, list, or table where it makes sense.
+- Be specific — name resorts, snow depths, runs, towns.
+- Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced"."""
+
+    prompt = f"""Today is {today}. Write a DAILY ROUNDUP post covering Japan's ski regions.
 
 Resort database by region:
 {resort_db}
@@ -573,28 +589,27 @@ Resort database by region:
 Recent skiing news:
 {sources_text}
 
-Organise by REGION with <h2> tags. Cover what's newsworthy - you don't need every resort every day. Rotate minor resorts over time.
+Organise by REGION with <h2> tags. Cover what's newsworthy. Rotate minor resorts over time.
 
-If off-season (April-November), pivot to: pre-season forecasts, resort upgrades, pass deals, or "what to know for next season".
+If off-season (April–November), pivot to: pre-season forecasts, resort upgrades, pass deals, or "what to know for next season".
 
 WRITING STYLE:
 - Write like an Aussie mate giving a mate a rundown. Natural, direct, occasionally opinionated.
 - Short, varied sentence lengths. Mix long and short. Sometimes just a few words.
 - Use contractions freely (don't, can't, it's, there's, you'll).
-- Starting a sentence with "And" or "But" is fine.
 - Be specific. Name resorts, snow depths, runs, towns. No filler adjectives.
-- No em dashes (use commas or full stops instead).
-- Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced".
+- Include your honest take: “I’d rather be at X than Y right now because…”
 
 Respond ONLY with a JSON object (no markdown fences):
 {{
   "title": "Japan Snow Report - compelling headline for {today}",
   "tag": "Snow Report",
   "excerpt": "One sentence, max 160 chars",
-  "body_html": "600-1000 words. <h2> for regions, <p> for text. Be specific - name resorts, conditions, snow depths. Write like an Aussie mate who checks the cams every morning. Include practical tips."
+  "body_html": "700-1000 words. <h2> for regions, <p> for text. Be specific - name resorts, conditions, snow depths. Write like an Aussie mate who checks the cams every morning. Include practical tips."
 }}"""
 
-    return call_claude_json(prompt, max_tokens=3500, required_keys=("title", "tag", "body_html"))
+    return call_claude_json(prompt, system=system, max_tokens=3500, required_keys=("title", "tag", "body_html"))
+
 
 
 # ---------------------------------------------------------------------------
@@ -643,11 +658,27 @@ def generate_feature_article(rss_items: list[dict], existing_titles: list[str]) 
         for it in rss_items[:6]
     )
 
-    prompt = f"""You are a blog writer for Piquno, a Japan skiing journal by an Australian skier.
+        system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
 
-Write a FEATURE ARTICLE - a standalone, evergreen piece someone planning a Japan ski trip would bookmark.
+Voice rules:
+- Write like a mate who’s been there — warm, practical, slightly sarcastic when needed, zero corporate fluff.
+- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she’ll be right").
+- Every post must feel like it was written by a real person who actually skis Japan.
+- Short paragraphs. Lots of white space.
+- Always give the reader a clear takeaway.
 
-Recent posts (AVOID repeating these topics, not just these titles):
+Content rules:
+- Lead with the answer or strongest hook in the first 2–3 sentences.
+- Use descriptive H2 headings.
+- Include at least one list, comparison or table.
+- Add a short “My take as an Aussie who skis Japan every year” section near the end.
+- Finish with 4–5 FAQ questions + answers.
+- Be specific — name real resorts, runs, towns, gear brands.
+- Avoid AI-tell phrases."""
+
+    prompt = f"""Write a FEATURE ARTICLE - a standalone, evergreen piece someone planning a Japan ski trip would bookmark.
+
+Recent posts (AVOID repeating these topics):
 {recent}
 
 Topic ideas (pick one or invent your own):
@@ -662,22 +693,18 @@ Resort database:
 WRITING STYLE:
 - Write like an Aussie mate explaining something to another Aussie mate. Opinionated, specific, direct.
 - Mix short and long sentences. Occasional one-word sentence for emphasis.
-- Use contractions (don't, can't, it's, there's, you'll).
-- Starting a sentence with "And" or "But" is fine when it flows naturally.
 - Include a hot take or two. Opinions make articles memorable.
-- No em dashes (use commas or full stops instead).
-- Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced".
-- Name real resorts, runs, towns, gear brands. Specifics beat generalities.
+- Name real resorts, runs, towns, gear brands.
 
 Respond ONLY with a JSON object (no markdown fences):
 {{
   "title": "SEO-friendly headline",
   "tag": one of {json.dumps(FEATURE_TAGS)},
   "excerpt": "One sentence, max 160 chars",
-  "body_html": "700-1200 words. <h2> subheadings, <p> paragraphs. Be opinionated and specific - name resorts, runs, towns, gear. Write like a knowledgeable mate, not a content mill. Aussie perspective welcome."
+  "body_html": "900-1300 words. <h2> subheadings, <p> paragraphs. Be opinionated and specific. Aussie perspective welcome. End with 4-5 FAQ questions + answers."
 }}"""
 
-    return call_claude_json(prompt, max_tokens=4000, required_keys=("title", "tag", "body_html"))
+    return call_claude_json(prompt, system=system, max_tokens=4000, required_keys=("title", "tag", "body_html"))
 
 
 # ---------------------------------------------------------------------------
