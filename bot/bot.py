@@ -532,7 +532,38 @@ def call_claude_json(prompt: str, system: str = "", max_tokens: int = 3500, requ
     if missing:
         log.error(f"Claude JSON missing required keys: {missing}")
         return None
-    return data
+    return _humanize_tree(data)
+
+
+# ---------------------------------------------------------------------------
+# AI-tell scrubbing
+# ---------------------------------------------------------------------------
+# Em-dashes (—) and en-dashes (–) are punctuation almost nobody types on a
+# phone or laptop keyboard, but LLMs produce them constantly — they're one
+# of the clearest "this was written by an AI" tells. Strip them from all
+# generated content and replace with what a human would actually type.
+
+def _humanize_punctuation(s: str) -> str:
+    if not isinstance(s, str):
+        return s
+    # "word—word"  → "word - word"    (em-dash used as parenthetical break)
+    # "word — word" → "word  -  word" (same, with surrounding spaces)
+    # "2–3", "April–November" → "2-3", "April-November" (en-dash as range)
+    s = s.replace("—", " - ").replace("–", "-")
+    # Collapse double spaces introduced by the em-dash replacement
+    s = re.sub(r" {2,}", " ", s)
+    return s
+
+
+def _humanize_tree(value):
+    """Recursively strip AI-tell dashes from all strings in a JSON tree."""
+    if isinstance(value, str):
+        return _humanize_punctuation(value)
+    if isinstance(value, list):
+        return [_humanize_tree(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _humanize_tree(v) for k, v in value.items()}
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -583,18 +614,19 @@ def generate_daily_roundup(rss_items: list[dict]) -> dict | None:
     system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
 
 Voice rules:
-- Write like a mate who’s been there — warm, practical, slightly sarcastic when needed, zero corporate fluff.
-- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she’ll be right").
+- Write like a mate who's been there: warm, practical, slightly sarcastic when needed, zero corporate fluff.
+- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she'll be right").
 - Every post must feel like it was written by a real person who actually skis Japan, not a generic AI.
 - Short paragraphs. Lots of white space. Never wall-of-text.
 - Always give the reader a clear takeaway or decision.
 
 Content rules:
-- Lead with the answer or strongest hook in the first 2–3 sentences.
-- Use descriptive H2 headings (never generic “Overview”).
+- Lead with the answer or strongest hook in the first 2 to 3 sentences.
+- Use descriptive H2 headings (never generic "Overview").
 - Include at least one comparison, list, or table where it makes sense.
-- Be specific — name resorts, snow depths, runs, towns.
-- Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced"."""
+- Be specific. Name resorts, snow depths, runs, towns.
+- Avoid AI-tell phrases like "delve into", "vibrant tapestry", "testament to", "landscape of", "unlock", "embark on", or "nuanced".
+- NEVER use em-dashes (—) or en-dashes (–). They are a dead giveaway that an AI wrote the post. Use a regular hyphen, a comma, parentheses, or two short sentences instead."""
 
     prompt = f"""Today is {today}. Write a DAILY ROUNDUP post covering Japan's ski regions.
 
@@ -606,14 +638,14 @@ Recent skiing news:
 
 Organise by REGION with <h2> tags. Cover what's newsworthy. Rotate minor resorts over time.
 
-If off-season (April–November), pivot to: pre-season forecasts, resort upgrades, pass deals, or "what to know for next season".
+If off-season (April to November), pivot to: pre-season forecasts, resort upgrades, pass deals, or "what to know for next season".
 
 WRITING STYLE:
 - Write like an Aussie mate giving a mate a rundown. Natural, direct, occasionally opinionated.
 - Short, varied sentence lengths. Mix long and short. Sometimes just a few words.
 - Use contractions freely (don't, can't, it's, there's, you'll).
 - Be specific. Name resorts, snow depths, runs, towns. No filler adjectives.
-- Include your honest take: “I’d rather be at X than Y right now because…”
+- Include your honest take: "I'd rather be at X than Y right now because…"
 
 Respond ONLY with a JSON object (no markdown fences):
 {{
@@ -674,20 +706,21 @@ def generate_feature_article(rss_items: list[dict], existing_titles: list[str]) 
     system = """You are Piquno, a Japan skiing journal written by an Australian skier living in Melbourne who is completely obsessed with Japow but keeps it brutally honest.
 
 Voice rules:
-- Write like a mate who’s been there — warm, practical, slightly sarcastic when needed, zero corporate fluff.
-- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she’ll be right").
+- Write like a mate who's been there: warm, practical, slightly sarcastic when needed, zero corporate fluff.
+- Use light Aussie slang naturally ("ripper", "bloody", "mate", "she'll be right").
 - Every post must feel like it was written by a real person who actually skis Japan.
 - Short paragraphs. Lots of white space.
 - Always give the reader a clear takeaway.
 
 Content rules:
-- Lead with the answer or strongest hook in the first 2–3 sentences.
+- Lead with the answer or strongest hook in the first 2 to 3 sentences.
 - Use descriptive H2 headings.
 - Include at least one list, comparison or table.
-- Add a short “My take as an Aussie who skis Japan every year” section near the end.
-- Finish with 4–5 FAQ questions + answers.
-- Be specific — name real resorts, runs, towns, gear brands.
-- Avoid AI-tell phrases."""
+- Add a short "My take as an Aussie who skis Japan every year" section near the end.
+- Finish with 4 to 5 FAQ questions + answers.
+- Be specific. Name real resorts, runs, towns, gear brands.
+- Avoid AI-tell phrases.
+- NEVER use em-dashes (—) or en-dashes (–). They are a dead giveaway that an AI wrote the post. Use a regular hyphen, a comma, parentheses, or two short sentences instead."""
 
     prompt = f"""Write a FEATURE ARTICLE - a standalone, evergreen piece someone planning a Japan ski trip would bookmark.
 
@@ -869,7 +902,7 @@ def build_post_html(article: dict, slug: str, date_str: str,
         '<meta name="twitter:card" content="summary_large_image">',
         '<meta name="twitter:site" content="@piqunoski">',
         '<meta name="twitter:creator" content="@piqunoski">',
-        f'<meta name="twitter:title" content="{_escape_attr(title)} — {SITE_NAME}">',
+        f'<meta name="twitter:title" content="{_escape_attr(title)} | {SITE_NAME}">',
         f'<meta name="twitter:description" content="{_escape_attr(excerpt)}">',
     ]
     if og_image:
@@ -1148,10 +1181,10 @@ def _tag_page_template(title: str, desc: str, posts: list[dict], canonical: str)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{html.escape(title)} — {SITE_NAME}</title>
+    <title>{html.escape(title)} | {SITE_NAME}</title>
     <meta name="description" content="{_escape_attr(desc)}">
     <link rel="canonical" href="{canonical}">
-    <meta property="og:title" content="{_escape_attr(title)} — {SITE_NAME}">
+    <meta property="og:title" content="{_escape_attr(title)} | {SITE_NAME}">
     <meta property="og:description" content="{_escape_attr(desc)}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{canonical}">
