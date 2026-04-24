@@ -187,13 +187,22 @@
                     list.innerHTML = posts.slice(0, 20).map(function (p) {
                         var d = new Date(p.date);
                         var dateStr = isNaN(d) ? '' : fmt.format(d);
-                        return '<a class="post-card" href="/posts/' + encodeURIComponent(p.slug) + '.html">' +
-                            '<div class="post-meta">' +
-                              '<span class="post-date">' + esc(dateStr) + '</span>' +
-                              '<span class="post-tag ' + esc(tagSlug(p.tag)) + '">' + esc(p.tag) + '</span>' +
+                        var hasThumb = !!p.image_url;
+                        var thumbHtml = hasThumb
+                            ? '<div class="post-card-thumb">' +
+                                '<img src="' + esc(p.image_url) + '" alt="" width="300" height="200" loading="lazy" decoding="async">' +
+                              '</div>'
+                            : '';
+                        return '<a class="post-card' + (hasThumb ? ' has-thumb' : '') + '" href="/posts/' + encodeURIComponent(p.slug) + '.html">' +
+                            thumbHtml +
+                            '<div class="post-card-body">' +
+                              '<div class="post-meta">' +
+                                '<span class="post-date">' + esc(dateStr) + '</span>' +
+                                '<span class="post-tag ' + esc(tagSlug(p.tag)) + '">' + esc(p.tag) + '</span>' +
+                              '</div>' +
+                              '<h2 class="post-title">' + esc(p.title) + '</h2>' +
+                              '<p class="post-excerpt">' + esc(p.excerpt || '') + '</p>' +
                             '</div>' +
-                            '<h2 class="post-title">' + esc(p.title) + '</h2>' +
-                            '<p class="post-excerpt">' + esc(p.excerpt || '') + '</p>' +
                           '</a>';
                     }).join('');
                 })

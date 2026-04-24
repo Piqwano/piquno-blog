@@ -764,13 +764,27 @@ def build_post_html(article: dict, slug: str, date_str: str,
                 p_slug = _escape_attr(p.get("slug", ""))
                 p_tag = html.escape(p.get("tag", ""))
                 p_tag_class = tag_to_slug(p.get("tag", ""))
+                p_image = p.get("image_url") or ""
+                p_thumb = ""
+                p_class = "post-card"
+                if p_image:
+                    p_class = "post-card has-thumb"
+                    p_thumb = (
+                        f'<div class="post-card-thumb">'
+                        f'<img src="{_escape_attr(p_image)}" alt="" '
+                        f'width="300" height="200" loading="lazy" decoding="async">'
+                        f'</div>'
+                    )
                 items.append(
-                    f'<a class="post-card" href="/posts/{p_slug}.html">'
+                    f'<a class="{p_class}" href="/posts/{p_slug}.html">'
+                    f'{p_thumb}'
+                    f'<div class="post-card-body">'
                     f'<div class="post-meta">'
                     f'<span class="post-tag {p_tag_class}">{p_tag}</span>'
                     f'</div>'
                     f'<h3 class="post-title">{p_title}</h3>'
                     f'<p class="post-excerpt">{p_excerpt}</p>'
+                    f'</div>'
                     f'</a>'
                 )
             read_next_html = (
@@ -986,14 +1000,30 @@ def _render_post_cards_html(posts: list[dict], limit: int = 20) -> str:
         title = html.escape(p.get("title", ""))
         excerpt = html.escape(p.get("excerpt", ""))
         slug = _escape_attr(p.get("slug", ""))
+        image_url = p.get("image_url") or ""
+        # Thumb is decorative (title acts as the a11y label on the link),
+        # so alt="" and intrinsic 3:2 dims reserve layout space pre-load.
+        thumb_html = ""
+        card_class = "post-card"
+        if image_url:
+            card_class = "post-card has-thumb"
+            thumb_html = (
+                f'          <div class="post-card-thumb">\n'
+                f'            <img src="{_escape_attr(image_url)}" alt="" '
+                f'width="300" height="200" loading="lazy" decoding="async">\n'
+                f'          </div>\n'
+            )
         lines.append(
-            f'        <a class="post-card" href="/posts/{slug}.html">\n'
-            f'          <div class="post-meta">\n'
-            f'            <span class="post-date">{date_fmt}</span>\n'
-            f'            <span class="post-tag {tag_class}">{html.escape(tag)}</span>\n'
+            f'        <a class="{card_class}" href="/posts/{slug}.html">\n'
+            f'{thumb_html}'
+            f'          <div class="post-card-body">\n'
+            f'            <div class="post-meta">\n'
+            f'              <span class="post-date">{date_fmt}</span>\n'
+            f'              <span class="post-tag {tag_class}">{html.escape(tag)}</span>\n'
+            f'            </div>\n'
+            f'            <h2 class="post-title">{title}</h2>\n'
+            f'            <p class="post-excerpt">{excerpt}</p>\n'
             f'          </div>\n'
-            f'          <h2 class="post-title">{title}</h2>\n'
-            f'          <p class="post-excerpt">{excerpt}</p>\n'
             f'        </a>'
         )
     return "\n".join(lines)
